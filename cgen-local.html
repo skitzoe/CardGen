@@ -1,0 +1,1821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Card Generator (LOCAL TEST)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            min-height: 100vh;
+            color: #e0e0e0;
+        }
+        .card-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #actualCardContent {
+            background: linear-gradient(145deg, #2a2a4e, #1a1a2e);
+            border: 2px solid #4a4a7e;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 10px 20px rgba(127,90,240,0.1);
+            width: 320px; 
+            height: 480px; 
+            position: relative; 
+            overflow: hidden; 
+            border-radius: 1rem; 
+            backdrop-filter: blur(10px);
+            transition: border-color 0.5s ease;
+        }
+        .card-art-area { 
+            position: absolute;
+            top: 0; 
+            left: 0;
+            width: 100%; 
+            height: 100%; 
+            z-index: 0; 
+            overflow: hidden; 
+        }
+        .card-image-display { 
+            display: block; 
+            width: 100%; 
+            height: 100%;
+            object-fit: cover; 
+            transition: all 0.3s ease;
+        }
+        #imagePlaceholderText, #imageLoader { 
+            color: #ccc; 
+            position: absolute; 
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1; 
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        .loader { 
+            border: 4px solid #4a4a7e; 
+            border-top: 4px solid #7f5af0; 
+            border-radius: 50%; 
+            width: 40px; 
+            height: 40px; 
+            animation: spin 1s linear infinite; 
+            margin: 20px auto; 
+        }
+        .small-loader { 
+            width: 20px; 
+            height: 20px; 
+            border-width: 2px; 
+            display: inline-block; 
+            margin-left: 8px; 
+        }
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
+        
+        .card-overlay-layer { 
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(180deg, 
+                rgba(0,0,0,0.1) 0%, 
+                rgba(0,0,0,0.3) 30%, 
+                rgba(0,0,0,0.4) 70%, 
+                rgba(0,0,0,0.8) 100%);
+            z-index: 10; 
+            pointer-events: none; 
+        }
+        
+        .card-name-area {
+            position: absolute;
+            top: 25px; 
+            left: 65px; 
+            right: 20px; 
+            height: 40px; 
+            display: flex;
+            align-items: center;
+            z-index: 11; 
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 0 15px;
+            backdrop-filter: blur(5px);
+            transition: background-color 0.5s ease;
+        }
+        #cardNameDisplay {
+            font-size: 1.1rem; 
+            font-weight: bold;
+            color: #fff; 
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.9); 
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            letter-spacing: 0.5px;
+        }
+
+        .card-lore-area { 
+            flex: 1;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            font-size: 0.7rem; 
+            line-height: 1.4;
+            color: #f0f0f0; 
+            padding: 8px 12px;
+            background: rgba(0,0,0,0.6); 
+            border-radius: 8px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .card-lore-text { 
+             flex-grow: 1;
+             overflow-y: auto;
+        }
+
+        .triggered-ability-area {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            font-style: italic;
+            font-size: 0.75rem;
+            color: #c7d2fe;
+        }
+
+        .card-body-wrapper {
+            position: absolute;
+            top: 280px;
+            bottom: 35px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            gap: 15px;
+            z-index: 11;
+        }
+
+        .card-stats-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            width: 60px;
+        }
+
+        .stat-box {
+            width: 60px;
+            height: 60px;
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
+        }
+
+        .stat-box .stat-label { font-size: 0.7rem; opacity: 0.9; margin: 0; }
+        .stat-box .stat-value { font-size: 1.5rem; line-height: 1.2; text-shadow: 2px 2px 4px rgba(0,0,0,0.9); }
+
+        .stat-attack { background: rgba(220,38,38,0.5); }
+        .stat-defense { background: rgba(59,130,246,0.5); }
+        .stat-speed { background: rgba(34,197,94,0.5); }
+
+        .stat-special-ability-area { 
+            position: absolute;
+            bottom: 5px; 
+            left: 20px; 
+            right: 20px;
+            height: 24px;
+            z-index: 11;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #fff; 
+            background: rgba(127,90,240,0.6); 
+            border-radius: 8px;
+            font-weight: bold;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            padding: 2px 10px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .card-dice-roll {
+            position: absolute;
+            top: 18px;
+            left: 18px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #0ea5e9, #0284c7);
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.7);
+            z-index: 12;
+            transition: background 0.5s ease;
+        }
+
+        .glass-card {
+            background: rgba(36, 36, 64, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .button-primary, .button-secondary, .button-export, .button-save, .button-regenerate { 
+            padding: 0.75rem 1.25rem; 
+            border-radius: 0.5rem; 
+            font-weight: 600; 
+            transition: all 0.3s ease; 
+            text-align: center; 
+            border: none;
+            cursor: pointer;
+        }
+        .button-primary { 
+            background: linear-gradient(135deg, #7f5af0, #9333ea); 
+            color: white; 
+            box-shadow: 0 4px 15px rgba(127,90,240,0.3);
+        } 
+        .button-primary:hover { 
+            background: linear-gradient(135deg, #6a48d0, #7c3aed); 
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(127,90,240,0.4);
+        }
+        .button-secondary { 
+            background: rgba(74, 74, 126, 0.8); 
+            color: #e0e0e0; 
+            backdrop-filter: blur(10px);
+        } 
+        .button-secondary:hover { 
+            background: rgba(90, 90, 142, 0.9); 
+            transform: translateY(-1px);
+        }
+        .button-export { 
+            background: linear-gradient(135deg, #22c55e, #16a34a); 
+            color: white; 
+            box-shadow: 0 4px 15px rgba(34,197,94,0.3);
+        } 
+        .button-export:hover { 
+            background: linear-gradient(135deg, #16a34a, #15803d); 
+            transform: translateY(-2px);
+        }
+        .button-save { 
+            background: linear-gradient(135deg, #0ea5e9, #0284c7); 
+            color: white; 
+            font-size: 0.75rem; 
+            padding: 0.5rem 0.75rem; 
+            margin-top: 0.5rem; 
+            display: inline-block;
+        } 
+        .button-save:hover { 
+            background: linear-gradient(135deg, #0284c7, #0369a1); 
+            transform: translateY(-1px);
+        }
+        .button-regenerate {
+            position: relative;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(5px);
+            flex-shrink: 0;
+            margin-left: auto;
+        }
+        .button-regenerate:hover { 
+            opacity: 1; 
+            background: rgba(127,90,240,0.8); 
+            transform: scale(1.1);
+        }
+
+        .input-field { 
+            background: rgba(42, 42, 78, 0.8); 
+            border: 1px solid rgba(74, 74, 126, 0.8); 
+            color: #e0e0e0; 
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        } 
+        .input-field:focus {
+            border-color: #7f5af0;
+            box-shadow: 0 0 0 3px rgba(127,90,240,0.1);
+            background: rgba(42, 42, 78, 0.9);
+        }
+        .input-field::placeholder { color: #999; }
+        
+        .radio-label input[type="radio"] { opacity: 0; width: 0; height: 0; }
+        .radio-label span { 
+            display: inline-block; 
+            padding: 0.6rem 1.2rem; 
+            background: rgba(42, 42, 78, 0.8); 
+            border: 1px solid rgba(74, 74, 126, 0.8); 
+            border-radius: 0.5rem; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            margin-right: 0.5rem;
+            backdrop-filter: blur(10px);
+        }
+        .radio-label input[type="radio"]:checked + span { 
+            background: linear-gradient(135deg, #7f5af0, #9333ea); 
+            border-color: #7f5af0; 
+            color: white; 
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(127,90,240,0.3);
+        }
+        .radio-label:hover span { 
+            background: rgba(58, 58, 94, 0.9); 
+            transform: translateY(-1px);
+        }
+        
+        .message-box { 
+            padding: 1rem 1.5rem; 
+            border-radius: 0.75rem; 
+            margin-bottom: 1rem; 
+            font-size: 0.9rem; 
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .message-box-success { 
+            background: rgba(16, 185, 129, 0.2); 
+            color: #6ee7b7; 
+            border-color: rgba(16, 185, 129, 0.3);
+        } 
+        .message-box-error { 
+            background: rgba(239, 68, 68, 0.2); 
+            color: #fca5a5; 
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+        
+        .section-title { 
+            color: #a78bfa; 
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .card-actions-container { 
+            width: 100%; 
+            max-width: 320px; 
+            margin-top: 1.5rem; 
+        }
+        .feature-display-area { 
+            margin-top: 1rem; 
+            padding: 1rem; 
+            background: rgba(42, 42, 78, 0.6); 
+            border-radius: 0.75rem; 
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .card-instance {
+            background: linear-gradient(145deg, #2a2a4e, #1a1a2e);
+            border: 2px solid #4a4a7e;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 10px 20px rgba(127,90,240,0.1);
+            width: 320px; 
+            height: 480px; 
+            position: relative; 
+            overflow: hidden; 
+            border-radius: 1rem; 
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .card-instance:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.6), 0 15px 30px rgba(127,90,240,0.2);
+            z-index: 20;
+        }
+        .selected-card {
+            transform: translateY(-5px) scale(1.05) !important;
+            border-color: #facc15; /* Legendary yellow for selection */
+            box-shadow: 0 30px 60px rgba(0,0,0,0.7), 0 0 30px rgba(250, 204, 21, 0.5) !important;
+            z-index: 25;
+        }
+
+        .api-config {
+            background: rgba(20, 20, 40, 0.8);
+            border: 1px solid rgba(74, 74, 126, 0.6);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .config-grid {
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 1rem; 
+        }
+
+        @media (max-width: 640px) {
+            .config-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Full Art View Feature */
+        .card-instance .card-overlay-layer,
+        .card-instance .card-name-area,
+        .card-instance .card-lore-area,
+        .card-instance .card-stats-container,
+        .card-instance .stat-special-ability-area {
+            opacity: 0;
+            transition: opacity 0.4s ease-in-out;
+        }
+
+        .card-instance:hover .card-overlay-layer,
+        .card-instance.selected-card .card-overlay-layer,
+        .card-instance:hover .card-name-area,
+        .card-instance.selected-card .card-name-area,
+        .card-instance:hover .card-lore-area,
+        .card-instance.selected-card .card-lore-area,
+        .card-instance:hover .card-stats-container,
+        .card-instance.selected-card .card-stats-container,
+        .card-instance:hover .stat-special-ability-area,
+        .card-instance.selected-card .stat-special-ability-area {
+            opacity: 1;
+        }
+
+        .card-instance:hover .card-image-display,
+        .card-instance.selected-card .card-image-display {
+            filter: brightness(0.8) contrast(1.1);
+        }
+
+        #subTypeContainer > div {
+            transition: opacity 0.4s ease-in-out, max-height 0.4s ease-in-out;
+            overflow: hidden;
+        }
+
+        /* Class for PNG export to ensure all elements are visible */
+        .exporting-card {
+            /* Reset transforms and shadows to a base state for stable canvas capture */
+            transform: none !important;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 10px 20px rgba(127,90,240,0.1) !important;
+        }
+
+        .exporting-card .card-overlay-layer,
+        .exporting-card .card-name-area,
+        .exporting-card .card-lore-area,
+        .exporting-card .card-stats-container,
+        .exporting-card .stat-special-ability-area {
+            opacity: 1 !important;
+            transition: none !important;
+        }
+        .exporting-card .card-image-display {
+            filter: brightness(0.8) contrast(1.1) !important;
+        }
+        .exporting-card .button-regenerate {
+            display: none !important;
+        }
+        .exporting-card .card-body-wrapper {
+            display: flex !important;
+        }
+        .exporting-card .card-lore-area { /* Force explicit position and size */
+            display: flex !important;
+            flex-direction: column !important;
+            top: 0 !important;
+            height: 100% !important;
+        }
+        .exporting-card .card-lore-text {
+            flex-grow: 0 !important; /* Let the content define the height */
+            position: relative !important; /* Help renderer with positioning */
+            overflow: visible !important; /* Ensure all text is captured */
+        }
+        /* Explicitly set line-height for html2canvas to prevent text shifting */
+        .exporting-card .card-lore-text, .exporting-card .triggered-ability-area p { line-height: 1.4 !important; }
+        /* Further stabilize positioning for html2canvas export */
+        .exporting-card .card-name-display, .exporting-card .stat-value {
+            position: relative; /* Helps canvas renderer calculate position more accurately */
+            line-height: 1.2 !important; /* Enforce consistent line height */
+        }
+        .exporting-card .triggered-ability-area p {
+            position: relative !important; /* Help renderer with positioning */
+        }
+
+        .view-art-button {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 12;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+
+        .selected-card .view-art-button {
+            opacity: 0.8;
+            transform: scale(1);
+        }
+
+        .view-art-button:hover {
+            opacity: 1;
+            background: rgba(127,90,240,0.8); 
+            transform: scale(1.1) !important;
+        }
+
+        #imageModal.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6">
+
+    <div class="w-full max-w-4xl p-6 sm:p-8 glass-card rounded-2xl shadow-2xl space-y-8">
+        <header class="text-center">
+            <h1 class="text-4xl sm:text-5xl font-bold text-white mb-2">AI Card Generator (LOCAL)</h1>
+            <p class="text-purple-300 text-lg">Powered by OpenRouter & DeepAI - Design unique cards with AI</p>
+        </header>
+
+        <div class="api-config">
+            <h2 class="text-xl font-semibold text-purple-300 mb-4">API Configuration</h2>
+            <div class="config-grid mb-4">
+                <div>
+                    <label for="apiKeyInput" class="block text-sm font-medium text-purple-300 mb-2">OpenRouter API Key (for Text):</label>
+                    <input type="password" id="apiKeyInput" class="w-full p-3 rounded-lg input-field focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Enter your OpenRouter API key">
+                    <p class="text-xs text-gray-400 mt-1">Get your key at <a href="https://openrouter.ai" target="_blank" class="text-purple-400 hover:text-purple-300">openrouter.ai</a></p>
+                </div>
+                <div>
+                    <label for="deepAiApiKeyInput" class="block text-sm font-medium text-purple-300 mb-2">DeepAI API Key (for Images):</label>
+                    <input type="password" id="deepAiApiKeyInput" class="w-full p-3 rounded-lg input-field focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Enter your DeepAI API key">
+                    <p class="text-xs text-gray-400 mt-1">Get your key at <a href="https://deepai.org/" target="_blank" class="text-purple-400 hover:text-purple-300">deepai.org</a></p>
+                </div>
+            </div>
+            <div>
+                <label for="imageModelSelect" class="block text-sm font-medium text-purple-300 mb-2">Image Generation Model:</label>
+                <select id="imageModelSelect" class="w-full p-3 rounded-lg input-field focus:ring-2 focus:ring-purple-500 outline-none">
+                    <optgroup label="DeepAI Models">
+                    <option value="deepai-stable-diffusion" selected>DeepAI Stable Diffusion</option>
+                    <option value="deepai-fantasy-world">DeepAI Fantasy World</option>
+                    <option value="deepai-anime-portrait-v2">DeepAI Anime Portrait v2</option>
+                    <option value="deepai-cute-creature-generator">DeepAI Cute Creature</option>
+                    <option value="deepai-cyberpunk-generator">DeepAI Cyberpunk</option>
+                    <option value="deepai-logo-generator">DeepAI Logo Generator</option>
+                    <option value="deepai-old-school-comic-generator">DeepAI Old-School Comic</option>
+                    </optgroup>
+                    <optgroup label="OpenRouter Models">
+                    <option value="stabilityai/stable-diffusion-3-medium">OpenRouter: SD3 Medium</option>
+                    </optgroup>
+                    <optgroup label="Custom">
+                    <option value="custom_backend">Custom Backend (RunPod, Colab, etc.)</option>
+                    </optgroup>
+                </select>
+            </div>
+            <div id="customBackendUrlContainer" class="hidden mt-4">
+                <label for="customBackendUrlInput" class="block text-sm font-medium text-purple-300 mb-2">Custom Backend URL:</label>
+                <input type="text" id="customBackendUrlInput" class="w-full p-3 rounded-lg input-field focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Enter your public backend URL">
+                <p class="text-xs text-gray-400 mt-1">This should be the public URL provided by your service (e.g., RunPod, ngrok).</p>
+            </div>
+        </div>
+
+        <div class="space-y-6">
+            <div>
+                <label for="cardNameInput" class="block text-sm font-medium text-purple-300 mb-2">Card Name (optional):</label>
+                <input type="text" id="cardNameInput" class="w-full p-3 rounded-lg input-field focus:ring-2 focus:ring-purple-500 outline-none" placeholder="e.g., 'Commander Rex' or 'Xylar the Conqueror'">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-purple-300 mb-2">Card Type:</label>
+                <div class="flex flex-wrap gap-2" id="cardTypeSelector">
+                    <label class="radio-label"><input type="radio" name="cardType" value="Any" checked><span>Any Type</span></label>
+                    <label class="radio-label"><input type="radio" name="cardType" value="Human"><span>Human</span></label>
+                    <label class="radio-label"><input type="radio" name="cardType" value="Alien"><span>Alien</span></label>
+                    <label class="radio-label"><input type="radio" name="cardType" value="Zombie"><span>Zombie</span></label>
+                    <label class="radio-label"><input type="radio" name="cardType" value="Power Up"><span>Power Up</span></label>
+                </div>
+            </div>
+
+            <div>
+                <label for="artStyleSelect" class="block text-sm font-medium text-purple-300 mb-2">Art Style:</label>
+                <select id="artStyleSelect" class="w-full p-3 rounded-lg input-field">
+                    <option value="none" selected>Default (Cinematic Fantasy)</option>
+                    <option value="photorealistic">Photorealistic</option>
+                    <option value="anime">Anime / Manga</option>
+                    <option value="pixel_art">Pixel Art</option>
+                    <option value="watercolor">Watercolor</option>
+                </select>
+            </div>
+
+            <!-- Conditional Sub-Type Options -->
+            <div id="subTypeContainer" class="space-y-4 mt-4">
+                <div id="humanOptions" class="hidden">
+                    <label for="humanOccupationSelect" class="block text-sm font-medium text-purple-300 mb-2">Human Occupation:</label>
+                    <select id="humanOccupationSelect" class="w-full p-3 rounded-lg input-field">
+                        <option>Soldier</option><option>Medic</option><option>Engineer</option><option>Scout</option><option>Psionic</option>
+                    </select>
+                </div>
+                <div id="alienOptions" class="hidden">
+                    <label for="alienSpeciesSelect" class="block text-sm font-medium text-purple-300 mb-2">Alien Species:</label>
+                    <select id="alienSpeciesSelect" class="w-full p-3 rounded-lg input-field">
+                        <option>Reptilian</option><option>Insectoid</option><option>Crystalline</option><option>Gaseous</option><option>Aquatic</option>
+                    </select>
+                </div>
+                <div id="zombieOptions" class="hidden">
+                    <label for="zombieAgeSelect" class="block text-sm font-medium text-purple-300 mb-2">Zombie Stage:</label>
+                    <select id="zombieAgeSelect" class="w-full p-3 rounded-lg input-field">
+                        <option>Recently Turned</option><option>Feral Ghoul</option><option>Ancient Walker</option><option>Bloated Brute</option>
+                    </select>
+                </div>
+                <div id="powerUpOptions" class="hidden">
+                    <label for="powerUpEffectSelect" class="block text-sm font-medium text-purple-300 mb-2">Power Up Effect:</label>
+                    <select id="powerUpEffectSelect" class="w-full p-3 rounded-lg input-field">
+                        <option>Healing</option><option>Destructive</option><option>Enhancement</option><option>Debuff</option>
+                    </select>
+                </div>
+            </div>
+            <!-- End Conditional Sub-Type Options -->
+            
+            <div>
+                <label for="cardDescription" class="block text-sm font-medium text-purple-300 mb-2">Describe Appearance & Abilities:</label>
+                <textarea id="cardDescription" rows="3" class="w-full p-3 rounded-lg input-field focus:ring-2 focus:ring-purple-500 outline-none" placeholder="e.g., 'A battle-hardened soldier with a laser rifle and cybernetic implants'"></textarea>
+                <p id="descriptionCounter" class="text-xs text-gray-400 mt-1 text-right"></p>
+            </div>
+            <style>
+                .rarity-common { color: #9ca3af; } .rarity-uncommon { color: #4ade80; }
+                .rarity-rare { color: #60a5fa; } .rarity-epic { color: #c084fc; }
+                .rarity-legendary { color: #facc15; }
+            </style>
+            </div>
+            
+            <button id="generateCardButton" class="w-full button-primary text-lg py-4">Generate Card</button>
+        </div>
+
+        <div id="loadingIndicator" class="loader hidden"></div>
+        <div id="messageArea" class="mt-4"></div>
+
+        <div id="cardDisplayAndActionsArea" class="mt-8 w-full space-y-6 hidden">
+            <div class="text-center">
+                <h2 class="text-3xl font-semibold section-title">Your Generated Cards</h2>
+                <p class="text-purple-300 mt-1">Four variations based on your prompt. Click a card to see actions.</p>
+            </div>
+            
+            <div id="imageLoader" class="loader hidden"></div>
+            <div id="cardGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 justify-items-center">
+                <!-- Cards will be dynamically inserted here -->
+            </div>
+
+            <div id="cardActionsContainer" class="w-full max-w-4xl mx-auto mt-6 hidden">
+                <div class="text-center mb-4">
+                    <h3 class="text-2xl font-semibold section-title">Card Actions</h3>
+                    <p>Actions for: <strong id="selectedCardNameDisplay" class="text-purple-300"></strong></p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl mx-auto">
+                    <button id="expandLoreButton" class="w-full button-secondary">?? Expand Lore <span id="expandLoreLoader" class="loader small-loader hidden"></span></button>
+                    <button id="suggestSynergiesButton" class="w-full button-secondary">?? Suggest Synergies <span id="suggestSynergiesLoader" class="loader small-loader hidden"></span></button>
+                    <button id="exportPngButton" class="w-full button-export">?? Export Selected Card</button>
+                    <button id="downloadAllZipButton" class="w-full button-export">?? Download All as ZIP</button>
+                </div>
+                <div id="expandedLoreDisplay" class="mt-4 text-sm text-gray-300 leading-relaxed hidden feature-display-area"></div>
+                <div id="synergiesDisplay" class="mt-4 text-sm text-gray-300 hidden feature-display-area space-y-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div id="historyModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 opacity-0 pointer-events-none transition-opacity duration-300" style="backdrop-filter: blur(8px);">
+        <div class="glass-card p-6 rounded-lg max-w-5xl w-full max-h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-purple-300">Generation History</h2>
+                <div>
+                    <button id="clearHistoryButton" class="button-secondary text-xs py-1 px-2 mr-2">Clear History</button>
+                    <button id="closeHistoryButton" class="text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-75 transition-transform hover:scale-110">&times;</button>
+                </div>
+            </div>
+            <div id="historyGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 overflow-y-auto flex-grow">
+                <!-- History items will be injected here -->
+            </div>
+            <p class="text-xs text-gray-400 mt-4 text-center">History is saved in your browser. Clearing browser data will remove it.</p>
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div id="imageModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 opacity-0 pointer-events-none transition-opacity duration-300" style="backdrop-filter: blur(8px);">
+        <div class="relative max-w-4xl max-h-[90vh] p-4">
+            <img id="modalImage" src="" alt="Full-size card art" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl">
+            <button id="closeModalButton" class="absolute top-0 right-0 m-2 text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-75 transition-transform hover:scale-110">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+    <!-- End Image Modal -->
+
+    <div class="absolute top-6 right-6">
+        <button id="historyButton" class="button-secondary">History</button>
+    </div>
+
+    <script>
+        // DOM Elements
+        const generateCardButton = document.getElementById('generateCardButton');
+        const cardNameInput = document.getElementById('cardNameInput'); 
+        const cardTypeSelector = document.getElementById('cardTypeSelector'); 
+        const cardDescriptionInput = document.getElementById('cardDescription');
+        const descriptionCounter = document.getElementById('descriptionCounter');
+        const artStyleSelect = document.getElementById('artStyleSelect');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const imageModelSelect = document.getElementById('imageModelSelect');
+
+        const deepAiApiKeyInput = document.getElementById('deepAiApiKeyInput');
+
+        // Sub-type elements
+        const humanOptions = document.getElementById('humanOptions');
+        const alienOptions = document.getElementById('alienOptions');
+        const zombieOptions = document.getElementById('zombieOptions');
+        const powerUpOptions = document.getElementById('powerUpOptions');
+        const humanOccupationSelect = document.getElementById('humanOccupationSelect');
+        const alienSpeciesSelect = document.getElementById('alienSpeciesSelect');
+        const zombieAgeSelect = document.getElementById('zombieAgeSelect');
+        const powerUpEffectSelect = document.getElementById('powerUpEffectSelect');
+        const customBackendUrlContainer = document.getElementById('customBackendUrlContainer');
+        const customBackendUrlInput = document.getElementById('customBackendUrlInput');
+
+        
+        const cardDisplayAndActionsArea = document.getElementById('cardDisplayAndActionsArea');
+        const cardGrid = document.getElementById('cardGrid');
+        const cardActionsContainer = document.getElementById('cardActionsContainer');
+        const selectedCardNameDisplay = document.getElementById('selectedCardNameDisplay');
+
+        const imageLoader = document.getElementById('imageLoader');
+
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const messageArea = document.getElementById('messageArea');
+        const expandLoreButton = document.getElementById('expandLoreButton');
+        const expandedLoreDisplay = document.getElementById('expandedLoreDisplay');
+        const expandLoreLoader = document.getElementById('expandLoreLoader');
+        const suggestSynergiesButton = document.getElementById('suggestSynergiesButton');
+        const synergiesDisplay = document.getElementById('synergiesDisplay');
+        const suggestSynergiesLoader = document.getElementById('suggestSynergiesLoader');
+        const exportPngButton = document.getElementById('exportPngButton'); 
+        const downloadAllZipButton = document.getElementById('downloadAllZipButton');
+
+        // Modal elements
+        const imageModal = document.getElementById('imageModal');
+        const modalImage = document.getElementById('modalImage');
+        const closeModalButton = document.getElementById('closeModalButton');
+
+        // History elements
+        const historyButton = document.getElementById('historyButton');
+        const historyModal = document.getElementById('historyModal');
+        const closeHistoryButton = document.getElementById('closeHistoryButton');
+        const historyGrid = document.getElementById('historyGrid');
+        const clearHistoryButton = document.getElementById('clearHistoryButton');
+
+        // State variables
+        let currentCardData = null; 
+        let currentCardStats = {}; 
+        let selectedCardElement = null;
+        let generationHistory = [];
+        
+        // API Configuration
+        const openRouterBaseUrl = "https://openrouter.ai/api/v1";
+        const originalDescriptionPlaceholder = cardDescriptionInput.placeholder; 
+
+        // Load saved API key
+        if (localStorage.getItem('openrouter_api_key')) {
+            apiKeyInput.value = localStorage.getItem('openrouter_api_key');
+        }
+
+        // Save API key on change
+        apiKeyInput.addEventListener('change', () => {
+            if (apiKeyInput.value.trim()) {
+                localStorage.setItem('openrouter_api_key', apiKeyInput.value.trim());
+            } else {
+                localStorage.removeItem('openrouter_api_key');
+            }
+        });
+
+        // Save/load DeepAI API key from local storage
+        deepAiApiKeyInput.addEventListener('change', () => {
+            if (deepAiApiKeyInput.value.trim()) {
+                localStorage.setItem('deepai_api_key', deepAiApiKeyInput.value.trim());
+            } else {
+                localStorage.removeItem('deepai_api_key');
+            }
+        });
+        if (localStorage.getItem('deepai_api_key')) {
+            deepAiApiKeyInput.value = localStorage.getItem('deepai_api_key');
+        }
+
+        // Show/hide Custom Backend URL input based on model selection
+        imageModelSelect.addEventListener('change', () => {
+            if (imageModelSelect.value === 'custom_backend') {
+                customBackendUrlContainer.classList.remove('hidden');
+            } else {
+                customBackendUrlContainer.classList.add('hidden');
+            }
+        });
+
+        // Save/load Custom Backend URL from local storage
+        customBackendUrlInput.addEventListener('change', () => {
+            localStorage.setItem('custom_backend_url', customBackendUrlInput.value.trim());
+        });
+        if (localStorage.getItem('custom_backend_url')) {
+            customBackendUrlInput.value = localStorage.getItem('custom_backend_url');
+        }
+        function hideAllSubtypeOptions() {
+            humanOptions.classList.add('hidden');
+            alienOptions.classList.add('hidden');
+            zombieOptions.classList.add('hidden');
+            powerUpOptions.classList.add('hidden');
+        }
+
+        // Card type selector logic
+        cardTypeSelector.addEventListener('change', (event) => {
+            hideAllSubtypeOptions(); // Hide all first
+            const selectedType = event.target.value;
+            let thematicPrompt = "";
+            let descriptionPlaceholder = "";
+
+            switch (selectedType) {
+                case "Human":
+                    thematicPrompt = "A resilient human survivor with advanced equipment, cybernetic enhancements, and tactical gear. Known for adaptability and resourcefulness in hostile environments.";
+                    descriptionPlaceholder = "e.g., 'A battle-hardened soldier with plasma rifle and tactical armor'";
+                    humanOptions.classList.remove('hidden');
+                    break;
+                case "Alien":
+                    thematicPrompt = "An extraterrestrial being with unique physiology, advanced biotechnology, and otherworldly abilities. Possesses knowledge beyond human understanding.";
+                    descriptionPlaceholder = "e.g., 'A crystalline entity with telepathic abilities and energy manipulation'";
+                    alienOptions.classList.remove('hidden');
+                    break;
+                case "Zombie":
+                    thematicPrompt = "An undead creature driven by primal hunger, featuring decaying flesh, supernatural resilience, and infectious capabilities.";
+                    descriptionPlaceholder = "e.g., 'A mutated zombie with glowing eyes and razor-sharp claws'";
+                    zombieOptions.classList.remove('hidden');
+                    break;
+                case "Power Up":
+                    thematicPrompt = "A powerful enhancement item or technological device that augments abilities. Could be a weapon, armor piece, or mystical artifact.";
+                    descriptionPlaceholder = "e.g., 'A plasma energy core that boosts weapon damage by 50%'";
+                    powerUpOptions.classList.remove('hidden');
+                    break;
+                case "Any":
+                default:
+                    thematicPrompt = ""; 
+                    descriptionPlaceholder = originalDescriptionPlaceholder; 
+                    break; 
+            }
+            // Only set the thematic prompt if the user hasn't typed anything custom for that type yet
+            if (cardDescriptionInput.value === '' || cardDescriptionInput.value.startsWith('A resilient human') || cardDescriptionInput.value.startsWith('An extraterrestrial') || cardDescriptionInput.value.startsWith('An undead creature') || cardDescriptionInput.value.startsWith('A powerful enhancement')) {
+                 cardDescriptionInput.value = thematicPrompt;
+            }
+            cardDescriptionInput.placeholder = descriptionPlaceholder; 
+        });
+        
+        // Automatically determine rarity based on description length
+        const getRarityFromDescription = (desc) => {
+            const len = desc.length;
+            if (len >= 700) return "Legendary";
+            if (len >= 450) return "Epic";
+            if (len >= 200) return "Rare";
+            if (len >= 50) return "Uncommon";
+            return "Common";
+        };
+
+        // Character counter for description
+        function updateDescriptionCounter() {
+            const text = cardDescriptionInput.value;
+            const len = text.length;
+            const rarity = getRarityFromDescription(text);
+            let nextRarity = '', nextGoal = 0;
+
+            if (rarity === 'Common') { nextRarity = 'Uncommon'; nextGoal = 50; }
+            else if (rarity === 'Uncommon') { nextRarity = 'Rare'; nextGoal = 200; }
+            else if (rarity === 'Rare') { nextRarity = 'Epic'; nextGoal = 450; }
+            else if (rarity === 'Epic') { nextRarity = 'Legendary'; nextGoal = 700; }
+
+            let counterText = `${len} characters. Rarity: <strong class="rarity-${rarity.toLowerCase()}">${rarity}</strong>.`;
+            if (nextRarity) { counterText += ` ${nextGoal - len} more for ${nextRarity}.`; }
+            descriptionCounter.innerHTML = counterText;
+        }
+        cardDescriptionInput.addEventListener('input', updateDescriptionCounter);
+        updateDescriptionCounter(); // Initial call
+
+        // Main card generation function
+        generateCardButton.addEventListener('click', async () => {
+            const openRouterApiKey = apiKeyInput.value.trim();
+            if (!openRouterApiKey) {
+                showMessage("Please enter your OpenRouter API key first.", "error");
+                return;
+            }
+
+            const userCardName = cardNameInput.value.trim(); 
+            const selectedTypeElement = document.querySelector('input[name="cardType"]:checked'); 
+            const cardType = selectedTypeElement ? selectedTypeElement.value : "Any";
+            const description = cardDescriptionInput.value.trim();
+            const cardRarity = getRarityFromDescription(description);
+
+            // Get sub-type detail
+            let subTypeDetail = "";
+            if (cardType === "Human") {
+                subTypeDetail = `Occupation: ${humanOccupationSelect.value}`;
+            } else if (cardType === "Alien") {
+                subTypeDetail = `Species: ${alienSpeciesSelect.value}`;
+            } else if (cardType === "Zombie") {
+                subTypeDetail = `Stage: ${zombieAgeSelect.value}`;
+            } else if (cardType === "Power Up") {
+                subTypeDetail = `Effect: ${powerUpEffectSelect.value}`;
+            }
+
+            if (!description && !userCardName) { 
+                showMessage("Please provide a character name or description.", "error"); 
+                return;
+            }
+
+            const deepAiApiKey = deepAiApiKeyInput.value.trim();
+            if (imageModelSelect.value.startsWith('deepai-') && !deepAiApiKey) {
+                showMessage("Please enter your DeepAI API key for this model.", "error");
+                return;
+            }
+
+            const customBackendUrl = customBackendUrlInput.value.trim();
+            if (imageModelSelect.value === 'custom_backend' && !customBackendUrl) {
+                showMessage("Please enter the URL for your custom backend.", "error");
+                return;
+            }
+
+            clearMessages();
+            loadingIndicator.classList.remove('hidden');
+            cardDisplayAndActionsArea.classList.add('hidden');
+            
+            currentCardData = null; 
+            currentCardStats = {}; 
+            selectedCardElement = null;
+
+            try {
+                // Step 1: Generate card concept with text model
+                showMessage("Creating card concept...", "success");
+                
+                let cardConceptPrompt = `You are a card game designer. Create a detailed card based on:
+                - Card Name: "${userCardName || "Auto-generate"}"
+                - Type: "${cardType}"
+                ${subTypeDetail ? `- ${subTypeDetail}` : ''}
+                - Rarity: "${cardRarity}"
+                - Description: "${description}"
+
+                The rarity should influence the power of the stats and the epicness of the lore and ability. For example, Legendary cards should have higher stats (e.g., 8-10) and more powerful abilities than Common cards (e.g., 1-3).
+
+                Return ONLY a JSON object with these exact fields:
+                {
+                    "cardName": "Cool name (max 25 chars)",
+                    "cardLore": "Brief lore (max 120 chars)",
+                    "diceRoll": number_between_0_and_12,
+                    "stats": {
+                        "attack": number_between_01_and_10,
+                        "defense": number_between_01_and_10,
+                        "speed": number_between_01_and_10
+                    },
+                    "abilityKeyword": "A short keyword for the ability (e.g., Flying, Taunt, Ambush). Max 15 chars.",
+                    "triggeredAbility": "Rules text for an ability, like 'When this card enters the battlefield, draw a card.' (max 150 chars)",
+                    "imagePrompt": "A detailed, artistic description for an image generator (max 250 chars). This should be a visually rich description of the card's subject."
+                }
+                
+                The card name must be in title case.`;
+
+                const textResponse = await callOpenRouterAPI({
+                    model: "deepseek/deepseek-chat-v3.1:free",
+                    messages: [{ role: "user", content: cardConceptPrompt }],
+                    response_format: { type: "json_object" }
+                }, openRouterApiKey);
+
+                let cardDataText = textResponse.choices[0].message.content;
+                // Clean the response: LLMs sometimes wrap JSON in ```json ... ```
+                const cleanedCardDataText = cardDataText.replace(/```json\n?|```/g, '').trim();
+
+                currentCardData = JSON.parse(cleanedCardDataText); 
+                currentCardData.rarity = cardRarity;
+                currentCardStats = currentCardData.stats; 
+
+                cardDisplayAndActionsArea.classList.remove('hidden');
+                cardActionsContainer.classList.add('hidden');
+                cardGrid.innerHTML = '';
+
+                // Step 2: Generate images
+                imageLoader.classList.remove('hidden');
+                showMessage("Generating card art...", "success");
+
+                try {
+                    let baseImagePrompt = currentCardData.imagePrompt;
+                    const selectedArtStyle = artStyleSelect.value;
+                    let styleModifier = "epic card game art, fantasy illustration, detailed, high quality, cinematic lighting"; // Default style
+
+                    if (selectedArtStyle === 'photorealistic') {
+                        styleModifier = "photorealistic, 8k, detailed, high quality, sharp focus";
+                    } else if (selectedArtStyle === 'anime') {
+                        styleModifier = "[[[[anime style]]], manga, detailed, vibrant colors, key visual";
+                    } else if (selectedArtStyle === 'pixel_art') {
+                        styleModifier = "[[[pixelated]]], pixel, 8-bit, detailed sprite, vibrant";
+                    } else if (selectedArtStyle === 'watercolor') {
+                        styleModifier = "watercolor painting, wet-on-wet, detailed, soft colors";
+                    }
+
+                    const imagePrompt = `${styleModifier}, ${baseImagePrompt}`;
+                    const imageModel = imageModelSelect.value;
+
+                    let imageUrls = [];
+                    if (imageModel === 'custom_backend') {
+                        // Use the custom backend
+                        const promises = [];
+                        for (let i = 0; i < 4; i++) {
+                            promises.push(callCustomBackendForImage({ url: customBackendUrl, prompt: imagePrompt }));
+                        }
+                        imageUrls = await Promise.all(promises);
+                    } else {
+                        // Use a cloud API (OpenRouter or DeepAI)
+                        const promises = [];
+                        for (let i = 0; i < 4; i++) {
+                            promises.push(callImageGenerationApi({ model: imageModel, prompt: imagePrompt, openRouterApiKey, deepAiApiKey }));
+                        }
+                        imageUrls = await Promise.all(promises);
+                    }
+
+                    if (imageUrls.length > 0) {
+                        imageLoader.classList.add('hidden');
+                        imageUrls.forEach((url, index) => {
+                            const cardElement = document.createElement('div');
+                            cardElement.className = 'card-instance';
+                            cardElement.innerHTML = createCardHTML(currentCardData, url);
+
+                            // Set rarity colors
+                            let borderColor = '#4a4a7e';
+                            let nameBackgroundColor = 'rgba(0,0,0,0.3)';
+                            let diceRollBackgroundColor = 'linear-gradient(145deg, #0ea5e9, #0284c7)'; // Default blue
+                            switch (currentCardData.rarity) {
+                                case 'Common': 
+                                    borderColor = '#9ca3af'; nameBackgroundColor = 'rgba(156, 163, 175, 0.4)'; 
+                                    diceRollBackgroundColor = 'linear-gradient(145deg, #6b7280, #4b5563)'; // Gray
+                                    break;
+                                case 'Uncommon': 
+                                    borderColor = '#4ade80'; nameBackgroundColor = 'rgba(74, 222, 128, 0.4)'; 
+                                    diceRollBackgroundColor = 'linear-gradient(145deg, #34d399, #10b981)'; // Green
+                                    break;
+                                case 'Rare': 
+                                    borderColor = '#60a5fa'; nameBackgroundColor = 'rgba(96, 165, 250, 0.4)'; 
+                                    diceRollBackgroundColor = 'linear-gradient(145deg, #3b82f6, #2563eb)'; // Blue
+                                    break;
+                                case 'Epic': 
+                                    borderColor = '#c084fc'; nameBackgroundColor = 'rgba(192, 132, 252, 0.4)'; 
+                                    diceRollBackgroundColor = 'linear-gradient(145deg, #a78bfa, #8b5cf6)'; // Purple
+                                    break;
+                                case 'Legendary': 
+                                    borderColor = '#facc15'; nameBackgroundColor = 'rgba(250, 204, 21, 0.4)'; 
+                                    diceRollBackgroundColor = 'linear-gradient(145deg, #f59e0b, #d97706)'; // Gold
+                                    break;
+                            }
+                            cardElement.style.borderColor = borderColor;
+                            cardElement.querySelector('.card-name-area').style.backgroundColor = nameBackgroundColor;
+                            cardElement.querySelector('.card-dice-roll').style.background = diceRollBackgroundColor;
+
+                            // Add selection listener
+                            cardElement.addEventListener('click', () => {
+                                document.querySelectorAll('.card-instance').forEach(c => c.classList.remove('selected-card'));
+                                selectedCardElement = cardElement;
+                                cardElement.classList.add('selected-card');
+                                
+                                selectedCardNameDisplay.textContent = currentCardData.cardName;
+                                cardActionsContainer.classList.remove('hidden');
+                            });
+                            
+                            // Add listener for this card's regenerate lore button
+                            const regenButton = cardElement.querySelector('.button-regenerate');
+                            regenButton.addEventListener('click', (e) => {
+                                e.stopPropagation(); // Prevent card selection when clicking the button
+                                handleLoreRegeneration();
+                            });
+
+                            // Adjust font size after a brief delay to allow rendering
+                            setTimeout(() => adjustLoreFontSize(cardElement), 50);
+
+                            const viewArtButton = cardElement.querySelector('.view-art-button');
+                            viewArtButton.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                openImageModal(url);
+                            });
+
+                            cardGrid.appendChild(cardElement);
+                        });
+                    } else {
+                        throw new Error("Image generation succeeded but returned no image data.");
+                    }
+
+                    // Save to history
+                    const finalImageUrls = Array.from(cardGrid.querySelectorAll('.card-image-display')).map(img => img.src);
+                    await saveToHistory(currentCardData, finalImageUrls);
+
+                } catch (imageError) {
+                    console.error("Error generating image:", imageError);
+                    let userFriendlyError = `Image Generation Error: ${imageError.message}`;
+                    if (imageError.message.toLowerCase().includes('unsafe content')) {
+                        userFriendlyError = "Image generation was blocked by the API's safety filter. Please try a different description, perhaps using less aggressive or sensitive terms.";
+                    }
+                    showMessage(userFriendlyError, "error");
+                    cardGrid.innerHTML = `<p class="text-center text-red-400 col-span-full">Image generation failed. Please check your API key and try again.</p>`;
+                }
+                
+            } catch (error) {
+                console.error("Error generating card:", error);
+                showMessage(`Error: ${error.message}`, "error");
+            } finally {
+                loadingIndicator.classList.add('hidden');
+                imageLoader.classList.add('hidden');
+            }
+        });
+
+        // Generic OpenRouter API call function
+        async function callOpenRouterAPI(payload, apiKey) {
+            const response = await fetch(`${openRouterBaseUrl}/chat/completions`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`,
+                    'HTTP-Referer': window.location.origin,
+                    'X-Title': 'AI Card Generator'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.text();
+                let errorMessage;
+                try {
+                    const errorJson = JSON.parse(errorData);
+                    errorMessage = errorJson.error?.message || `API error: ${response.status}`;
+                } catch {
+                    errorMessage = `API error: ${response.status} - ${errorData}`;
+                }
+                throw new Error(errorMessage);
+            }
+
+            return await response.json();
+        }
+
+        // Unified function for calling image generation APIs directly from the client
+        async function callImageGenerationApi(payload) {
+            let response;
+            const { model, prompt, openRouterApiKey, deepAiApiKey } = payload;
+
+            if (model.startsWith('deepai-')) {
+                // --- DeepAI API Call ---                
+                // Use the standard text2img for the base models, but specific endpoints for styled models.
+                let deepAiModelName = model.substring('deepai-'.length);
+                let DEEPAI_API_URL = `https://api.deepai.org/api/${deepAiModelName}`;
+                if (deepAiModelName === 'stable-diffusion' || deepAiModelName === 'fantasy-world') {
+                    DEEPAI_API_URL = 'https://api.deepai.org/api/text2img';
+                }
+
+                const formData = new FormData();
+                formData.append('text', prompt);
+                // The standard 'text2img' endpoint does not take a model parameter,
+                // but the other styled endpoints do.
+                if (deepAiModelName !== 'stable-diffusion' && deepAiModelName !== 'fantasy-world') {
+                    formData.append('model', deepAiModelName);
+                }
+
+                response = await fetch(DEEPAI_API_URL, {
+                    method: 'POST',
+                    headers: { 'api-key': deepAiApiKey },
+                    body: formData
+                });
+
+            } else {
+                // --- OpenRouter API Call ---
+                const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/images/generations';
+                response = await fetch(OPENROUTER_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${openRouterApiKey}`,
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        prompt: prompt,
+                        n: 1,
+                        size: "1024x1024"
+                    })
+                });
+            }
+
+            if (!response.ok) {
+                let errorMessage = `Image Generation Error: ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error?.message || errorData.err || `API returned an error.`;
+                } catch (e) {
+                    errorMessage = `An unexpected API error occurred (Status: ${response.status}).`;
+                }
+                throw new Error(errorMessage);
+            }
+
+            const result = await response.json();
+            // Handle different response structures
+            if (result.data && result.data[0] && result.data[0].url) {
+                return result.data[0].url; // OpenRouter response
+            } else if (result.output_url) {
+                return result.output_url; // DeepAI response
+            }
+            throw new Error("Unknown API response structure for image URL.");
+        }
+
+        // Function for Custom Backend image generation (RunPod, Colab, etc.)
+        async function callCustomBackendForImage(payload) {
+            const response = await fetch(payload.url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Bypass-Tunnel-Reminder': 'true' // Useful for ngrok tunnels
+                },
+                body: JSON.stringify({
+                    prompt: payload.prompt
+                })
+            });
+
+            if (!response.ok) {
+                let errorMessage = `Custom Backend Error: ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage += ` - ${errorData.error || JSON.stringify(errorData)}`;
+                } catch (e) {
+                    // Could not parse JSON from the error response
+                    const textError = await response.text();
+                    errorMessage += ` - ${textError}`;
+                }
+                throw new Error(errorMessage);
+            }
+            // The backend should return the image file directly
+            const blob = await response.blob();
+            return URL.createObjectURL(blob);
+        }
+
+        function createCardHTML(cardData, imageUrl) {
+            return `
+                <div class="card-art-area">
+                    <img class="card-image-display" src="${imageUrl}" alt="Generated Card Art for ${cardData.cardName}"/>
+                    <button class="view-art-button" title="View Full Art">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M1.5 1a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 0h4a.5.5 0 0 1 0 1zM10 .5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 16 1.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5M.5 10a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 0 14.5v-4a.5.5 0 0 1 .5-.5m15 0a.5.5 0 0 1 .5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="card-dice-roll">${cardData.diceRoll ?? '0'}</div>
+                <div class="card-name-area">
+                    <h3 class="card-name-display pr-2">${cardData.cardName}</h3>
+                    <button class="button-regenerate" title="Regenerate Lore">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/></svg>
+                    </button>
+                </div>
+                <div class="card-body-wrapper">
+                    <div class="card-lore-area">
+                        <div class="card-lore-text">${cardData.cardLore}</div>
+                        <div class="triggered-ability-area">
+                            <p>${cardData.triggeredAbility || ''}</p>
+                        </div>
+                    </div>
+                    <div class="card-stats-container">
+                        <div class="stat-box stat-attack">
+                            <span class="stat-label">ATK</span>
+                            <span class="stat-value">${cardData.stats.attack || '--'}</span>
+                        </div>
+                        <div class="stat-box stat-defense">
+                            <span class="stat-label">DEF</span>
+                            <span class="stat-value">${cardData.stats.defense || '--'}</span>
+                        </div>
+                        <div class="stat-box stat-speed">
+                            <span class="stat-label">SPD</span>
+                            <span class="stat-value">${cardData.stats.speed || '--'}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-special-ability-area">
+                    <p>${cardData.abilityKeyword || 'Special Ability'}</p>
+                </div>
+                <div class="card-overlay-layer"></div>`;
+        }
+
+        // Text generation helper
+        async function callOpenRouterForText(prompt, apiKey) {
+            const response = await callOpenRouterAPI({
+                model: "openrouter/sonoma-sky-alpha",
+                messages: [{ role: "user", content: prompt }]
+            }, apiKey);
+            
+            return response.choices[0].message.content;
+        }
+
+        // Regenerate lore function (called by buttons on cards)
+        async function handleLoreRegeneration() {
+            if (!currentCardData) {
+                showMessage("No card data available to regenerate lore.", "error");
+                return;
+            }
+            
+            const openRouterApiKey = apiKeyInput.value.trim();
+            if (!openRouterApiKey) {
+                showMessage("Please enter your OpenRouter API key.", "error");
+                return;
+            }
+
+            showMessage("Regenerating lore...", "success");
+            document.querySelectorAll('.button-regenerate').forEach(btn => {
+                btn.innerHTML = '<div class="loader small-loader"></div>';
+            });
+            
+            const lorePrompt = `Create new lore for this card (max 120 characters):
+            - Name: "${currentCardData.cardName}"
+            - Dice Roll: ${currentCardData.diceRoll}
+            - Rarity: "${currentCardData.rarity}"
+            - Stats: ATK ${currentCardStats.attack}, DEF ${currentCardStats.defense}, SPD ${currentCardStats.speed}
+            - Ability Keyword: "${currentCardData.abilityKeyword}"
+            - Triggered Ability: "${currentCardData.triggeredAbility}"
+            
+            Return ONLY the lore text, nothing else.`;
+            
+            try {
+                const newLore = await callOpenRouterForText(lorePrompt, openRouterApiKey);
+                currentCardData.cardLore = newLore.trim(); 
+                
+                // Update lore on all visible cards
+                document.querySelectorAll('.card-lore-text').forEach(el => {
+                    el.textContent = currentCardData.cardLore;
+                    adjustLoreFontSize(el.closest('.card-instance'));
+                });
+
+                showMessage("Lore regenerated!", "success");
+            } catch (error) {
+                console.error("Error regenerating lore:", error);
+                showMessage(`Error: ${error.message}`, "error");
+            } finally {
+                const svgIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/></svg>';
+                document.querySelectorAll('.button-regenerate').forEach(btn => btn.innerHTML = svgIcon);
+            }
+        }
+
+        // Function to dynamically adjust lore font size to fit the container
+        function adjustLoreFontSize(cardElement) {
+            const loreTextElement = cardElement.querySelector('.card-lore-text');
+            if (!loreTextElement) return;
+
+            // Reset to base font size
+            loreTextElement.style.fontSize = '0.7rem';
+
+            // Check for overflow and reduce font size until it fits
+            let currentFontSize = 0.7;
+            while (loreTextElement.scrollHeight > loreTextElement.clientHeight && currentFontSize > 0.4) {
+                currentFontSize -= 0.02; // Decrement font size
+                loreTextElement.style.fontSize = `${currentFontSize}rem`;
+            }
+        }
+
+
+        // Expand lore functionality
+        expandLoreButton.addEventListener('click', async () => {
+            if (!currentCardData) { 
+                showMessage("Please generate a card first.", "error"); 
+                return; 
+            }
+            
+            const openRouterApiKey = apiKeyInput.value.trim();
+            if (!openRouterApiKey) {
+                showMessage("Please enter your OpenRouter API key.", "error");
+                return;
+            }
+
+            expandLoreLoader.classList.remove('hidden'); 
+            expandedLoreDisplay.classList.add('hidden'); 
+            
+            const lorePrompt = `Expand this card lore into 2-3 detailed paragraphs:
+            Card: "${currentCardData.cardName}"
+            Current lore: "${currentCardData.cardLore}"
+            
+            Provide rich backstory, abilities details, and world context. Return only the expanded text.`;
+            
+            try {
+                const expandedText = await callOpenRouterForText(lorePrompt, openRouterApiKey);
+                
+                expandedLoreDisplay.innerHTML = '';
+                const saveButton = document.createElement('a');
+                saveButton.href = '#';
+                saveButton.id = 'saveLoreButton';
+                saveButton.className = 'button-save float-right';
+                saveButton.textContent = 'Save Lore';
+                
+                const textContent = document.createElement('div');
+                textContent.innerHTML = expandedText.replace(/\n/g, '<br>');
+
+                expandedLoreDisplay.appendChild(saveButton);
+                expandedLoreDisplay.appendChild(textContent);
+                expandedLoreDisplay.classList.remove('hidden'); 
+                
+                showMessage("Lore expanded!", "success");
+            } catch (error) {
+                console.error("Error expanding lore:", error); 
+                showMessage(`Error: ${error.message}`, "error");
+            } finally { 
+                expandLoreLoader.classList.add('hidden'); 
+            }
+        });
+
+        // Suggest synergies functionality
+        suggestSynergiesButton.addEventListener('click', async () => {
+            if (!currentCardData) { 
+                showMessage("Please generate a card first.", "error"); 
+                return; 
+            }
+            
+            const openRouterApiKey = apiKeyInput.value.trim();
+            if (!openRouterApiKey) {
+                showMessage("Please enter your OpenRouter API key.", "error");
+                return;
+            }
+
+            suggestSynergiesLoader.classList.remove('hidden'); 
+            synergiesDisplay.classList.add('hidden'); 
+            
+            const synergyPrompt = `For this card, suggest 3 synergistic cards/items:
+            Card: "${currentCardData.cardName}"
+            Dice Roll: ${currentCardData.diceRoll}
+            Rarity: "${currentCardData.rarity}"
+            Lore: "${currentCardData.cardLore}"
+            Stats: ATK ${currentCardStats.attack}, DEF ${currentCardStats.defense}, SPD ${currentCardStats.speed}
+            Ability Keyword: "${currentCardData.abilityKeyword}"
+            Triggered Ability: "${currentCardData.triggeredAbility}"
+            
+            Return ONLY valid JSON:
+            {"synergies": [{"conceptName": "Name", "conceptDescription": "Brief description", "synergyExplanation": "How they work together"}]}`;
+            
+            try {
+                const synergyText = await callOpenRouterForText(synergyPrompt, openRouterApiKey);
+                // More robust JSON cleaning: Find the first '{' and the last '}' to extract the JSON object,
+                // in case the model adds extra text before or after the JSON.
+                const firstBrace = synergyText.indexOf('{');
+                const lastBrace = synergyText.lastIndexOf('}');
+                if (firstBrace === -1 || lastBrace === -1) {
+                    throw new Error("No valid JSON object found in the AI's response.");
+                }
+                const cleanedSynergyText = synergyText.substring(firstBrace, lastBrace + 1);
+                const synergyData = JSON.parse(cleanedSynergyText);
+                
+                synergiesDisplay.innerHTML = '';
+                const saveButton = document.createElement('a');
+                saveButton.href = '#';
+                saveButton.id = 'saveSynergiesButton';
+                saveButton.className = 'button-save float-right';
+                saveButton.textContent = 'Save Synergies';
+                synergiesDisplay.appendChild(saveButton);
+
+                if (synergyData.synergies && synergyData.synergies.length > 0) {
+                    const title = document.createElement('h5');
+                    title.className = 'text-lg font-semibold text-purple-400 mb-3';
+                    title.textContent = 'Suggested Synergies:';
+                    synergiesDisplay.appendChild(title);
+
+                    synergyData.synergies.forEach(syn => {
+                        const synEl = document.createElement('div'); 
+                        synEl.className = 'p-3 bg-gray-700/50 rounded-lg border border-purple-500/20';
+                        // Add a data attribute to store the synergy data
+                        synEl.dataset.synergyData = JSON.stringify(syn);
+                        synEl.innerHTML = `
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <strong class="text-purple-300 text-base">${syn.conceptName}</strong>
+                                    <p class="text-sm my-2 text-gray-300">${syn.conceptDescription}</p>
+                                    <p class="text-sm italic text-purple-400">Synergy: ${syn.synergyExplanation}</p>
+                                </div>
+                                <button class="generate-synergy-button button-secondary text-xs py-1 px-2 ml-2 flex-shrink-0">Generate</button>
+                            </div>
+                        `;
+                        synergiesDisplay.appendChild(synEl);
+                    });
+                } else { 
+                    synergiesDisplay.innerHTML += '<p class="text-gray-400">No synergies suggested.</p>'; 
+                }
+                
+                synergiesDisplay.classList.remove('hidden'); 
+                showMessage("Synergies suggested!", "success");
+            } catch (error) {
+                console.error("Error suggesting synergies:", error); 
+                showMessage(`Error: ${error.message}`, "error");
+            } finally { 
+                suggestSynergiesLoader.classList.add('hidden'); 
+            }
+        });
+
+        // Listener for generating a card from a synergy suggestion
+        synergiesDisplay.addEventListener('click', function(event) {
+            if (event.target.classList.contains('generate-synergy-button')) {
+                const synergyItem = event.target.closest('[data-synergy-data]');
+                if (!synergyItem) return;
+
+                const synergyData = JSON.parse(synergyItem.dataset.synergyData);
+
+                // 1. Set the input fields
+                cardNameInput.value = synergyData.conceptName;
+                cardDescriptionInput.value = synergyData.conceptDescription;
+
+                // 2. Set the card type to "Power Up" as synergies are often items/abilities
+                const powerUpRadio = document.querySelector('input[name="cardType"][value="Power Up"]');
+                if (powerUpRadio) {
+                    powerUpRadio.checked = true;
+                    // Manually trigger the change event to update UI and thematic prompts
+                    powerUpRadio.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+
+                // 3. Scroll to top and trigger the main generate button
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                generateCardButton.click();
+            }
+        });
+
+        function downloadTextFile(content, filename) {
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            showMessage(`${filename} saved!`, 'success');
+        }
+        
+        // Download all cards as a zip file
+        downloadAllZipButton.addEventListener('click', async () => {
+            if (!currentCardData) {
+                showMessage("Please generate cards first.", "error");
+                return;
+            }
+
+            showMessage("Preparing zip file...", "success");
+            const zip = new JSZip();
+            const cardElements = Array.from(cardGrid.querySelectorAll('.card-instance'));
+            const options = { allowTaint: true, useCORS: true, scale: 2, backgroundColor: 'transparent' };
+
+            const promises = cardElements.map(async (el, i) => {
+                el.classList.add('exporting-card'); // Ensure all parts are visible
+                try {
+                    const canvas = await html2canvas(el, options);
+                    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                    const cardName = currentCardData?.cardName?.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() || 'ai_card';
+                    zip.file(`${cardName}_v${i + 1}.png`, blob);
+                } catch (err) {
+                    console.error(`Error rendering card ${i + 1} for zip:`, err);
+                    showMessage(`Error rendering card ${i + 1}.`, "error");
+                } finally {
+                    el.classList.remove('exporting-card'); // Clean up
+                }
+            });
+
+            await Promise.all(promises);
+
+            try {
+                const content = await zip.generateAsync({ type: "blob" });
+                const link = document.createElement('a');
+                const filename = (currentCardData?.cardName?.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() || 'ai_card_set') + '.zip';
+                link.download = filename;
+                link.href = URL.createObjectURL(content);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
+                showMessage("Card set saved as zip!", "success");
+            } catch (err) {
+                console.error("Error creating zip file:", err);
+                showMessage("Failed to create zip file.", "error");
+            }
+        });
+
+        // Export card as PNG
+        exportPngButton.addEventListener('click', () => {
+            if (!selectedCardElement || !currentCardData) { 
+                showMessage("Please generate and select a card first.", "error"); 
+                return; 
+            }
+            
+            showMessage("Preparing PNG export...", "success");
+            
+            // Temporarily apply a class to ensure all elements are visible for capture
+            selectedCardElement.classList.add('exporting-card');
+
+            const options = { 
+                allowTaint: true, 
+                useCORS: true, 
+                scale: 2, 
+                backgroundColor: 'transparent', // Use transparent to respect rounded corners
+                logging: false 
+            };
+            
+            // Use a short timeout to allow the DOM to update with the new class
+            setTimeout(() => {
+                html2canvas(selectedCardElement, options).then(canvas => {
+                    const imageURI = canvas.toDataURL('image/png');
+                    const link = document.createElement('a');
+                    const filename = (currentCardData?.cardName?.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() || 'ai_card') + '.png';
+                    link.download = filename; 
+                    link.href = imageURI;
+                    document.body.appendChild(link); 
+                    link.click(); 
+                    document.body.removeChild(link);
+                    showMessage("Card exported as PNG!", "success");
+                }).catch(err => {
+                    console.error("Error exporting card:", err); 
+                    showMessage("Export error: " + err.message, "error");
+                }).finally(() => {
+                    // Clean up the temporary class
+                    selectedCardElement.classList.remove('exporting-card');
+                });
+            }, 100);
+        });
+
+        // Image Modal Logic
+        function openImageModal(imageUrl) {
+            modalImage.src = imageUrl;
+            imageModal.classList.add('visible');
+        }
+
+        function closeImageModal() {
+            imageModal.classList.remove('visible');
+            // Optional: clear src to prevent showing old image briefly on next open
+            setTimeout(() => { modalImage.src = ''; }, 300); 
+        }
+
+        closeModalButton.addEventListener('click', closeImageModal);
+        imageModal.addEventListener('click', (e) => {
+            if (e.target === imageModal) {
+                closeImageModal();
+            }
+        });
+
+        // Utility functions
+        function showMessage(message, type = "success") {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message-box ${type === 'error' ? 'message-box-error' : 'message-box-success'}`;
+            messageDiv.textContent = message;
+            messageArea.innerHTML = ''; 
+            messageArea.appendChild(messageDiv);
+            setTimeout(() => { 
+                if (messageDiv.parentNode === messageArea) { 
+                    messageArea.removeChild(messageDiv); 
+                } 
+            }, 5000);
+        }
+        
+        function clearMessages() { 
+            messageArea.innerHTML = ''; 
+        }
+
+        // --- History Functions ---
+
+        // Note: This function converts blob URLs from Stability v2 API to base64 strings
+        // so they can be saved in localStorage and persist across sessions.
+        async function convertBlobUrlToBase64(blobUrl) {
+            const response = await fetch(blobUrl);
+            const blob = await response.blob();
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        async function saveToHistory(cardData, imageUrls) {
+            // Convert any blob URLs to base64 before saving
+            const persistentImageUrls = await Promise.all(
+                imageUrls.map(url => url.startsWith('blob:') ? convertBlobUrlToBase64(url) : url)
+            );
+
+            const historyEntry = {
+                cardData: JSON.parse(JSON.stringify(cardData)), // Deep copy
+                imageUrls: persistentImageUrls
+            };
+
+            // Add the new entry
+            generationHistory.unshift(historyEntry);
+
+            // Try to save, and if it fails due to quota, remove the oldest item and retry.
+            while (generationHistory.length > 0) {
+                try {
+                    localStorage.setItem('cardGenerationHistory', JSON.stringify(generationHistory));
+                    break; // Success! Exit the loop.
+                } catch (e) {
+                    if ((e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
+                        console.warn('LocalStorage quota exceeded. Removing oldest history item.');
+                        if (generationHistory.length <= 1) {
+                            // The new item itself is too large to be saved.
+                            console.error("The latest card generation is too large to save to history, even by itself. It will not be saved.");
+                            generationHistory.shift(); // Remove the new, oversized item.
+                            break; // Exit the loop, preserving the rest of the history.
+                        }
+                        generationHistory.pop(); // Remove the oldest entry
+                    } else {
+                        console.error('Failed to save history:', e);
+                        break; // Some other error, break the loop
+                    }
+                }
+            }
+            renderHistory();
+        }
+
+        function renderHistory() {
+            historyGrid.innerHTML = '';
+            if (generationHistory.length === 0) {
+                historyGrid.innerHTML = `<p class="col-span-full text-center text-gray-400">No history yet. Generate some cards!</p>`;
+                return;
+            }
+            generationHistory.forEach((entry, index) => {
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item p-2 rounded-lg bg-black/20 cursor-pointer transition-transform hover:scale-105';
+                historyItem.title = `Load "${entry.cardData.cardName}"`;
+                historyItem.innerHTML = `
+                    <img src="${entry.imageUrls[0]}" alt="${entry.cardData.cardName}" class="w-full h-auto aspect-square object-cover rounded-md">
+                    <p class="text-center text-sm mt-2 truncate text-gray-300">${entry.cardData.cardName}</p>
+                `;
+                historyItem.addEventListener('click', () => {
+                    loadGenerationFromHistory(index);
+                });
+                historyGrid.appendChild(historyItem);
+            });
+        }
+
+        function loadGenerationFromHistory(index) {
+            const entry = generationHistory[index];
+            if (!entry) return;
+
+            currentCardData = entry.cardData;
+            currentCardStats = currentCardData.stats;
+            selectedCardElement = null;
+            
+            cardGrid.innerHTML = '';
+            cardDisplayAndActionsArea.classList.remove('hidden');
+            cardActionsContainer.classList.add('hidden');
+
+            entry.imageUrls.forEach(url => {
+                const cardElement = document.createElement('div');
+                cardElement.className = 'card-instance';
+                cardElement.innerHTML = createCardHTML(currentCardData, url);
+                // This is a simplified re-creation. A full implementation would reuse the
+                // card creation logic from the main function to apply styles and listeners.
+                cardGrid.appendChild(cardElement);
+            });
+            
+            // A more robust solution would be to refactor the card display logic into a single function
+            // that can be called both by the main generator and this history loader.
+
+            closeHistoryModal();
+            showMessage(`Loaded "${currentCardData.cardName}" from history.`, 'success');
+        }
+
+        function loadHistory() {
+            const savedHistory = localStorage.getItem('cardGenerationHistory');
+            if (savedHistory) {
+                generationHistory = JSON.parse(savedHistory);
+                renderHistory();
+            }
+        }
+
+        function openHistoryModal() { historyModal.classList.add('visible'); }
+        function closeHistoryModal() { historyModal.classList.remove('visible'); }
+
+        historyButton.addEventListener('click', openHistoryModal);
+        closeHistoryButton.addEventListener('click', closeHistoryModal);
+        historyModal.addEventListener('click', (e) => { if (e.target === historyModal) closeHistoryModal(); });
+
+        clearHistoryButton.addEventListener('click', () => {
+            if (confirm('Are you sure you want to delete all generation history? This cannot be undone.')) {
+                generationHistory = [];
+                localStorage.removeItem('cardGenerationHistory');
+                renderHistory();
+                showMessage('History cleared.', 'success');
+            }
+        });
+
+        // Initial Load
+        loadHistory();
+    </script>
+</body>
+</html>
