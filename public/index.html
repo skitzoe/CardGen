@@ -552,48 +552,6 @@
             <h1 class="text-4xl sm:text-5xl font-bold text-white mb-2">AI Card Generator (LOCAL)</h1>
             <p class="text-purple-300 text-lg">Powered by OpenRouter & DeepAI - Design unique cards with AI</p>
         </header>
-
-        <div class="api-config">
-            <h2 class="text-xl font-semibold text-purple-300 mb-4">API Configuration</h2>
-            <div class="config-grid mb-4">
-                <div>
-                    <label for="apiKeyInput" class="block text-sm font-medium text-purple-300 mb-2">OpenRouter API Key (for Text):</label>
-                    <input type="password" id="apiKeyInput" class="w-full p-3 rounded-lg input-field focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Enter your OpenRouter API key">
-                    <p class="text-xs text-gray-400 mt-1">Get your key at <a href="https://openrouter.ai" target="_blank" class="text-purple-400 hover:text-purple-300">openrouter.ai</a></p>
-                </div>
-                <div>
-                    <label for="deepAiApiKeyInput" class="block text-sm font-medium text-purple-300 mb-2">DeepAI API Key (for Images):</label>
-                    <input type="password" id="deepAiApiKeyInput" class="w-full p-3 rounded-lg input-field focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Enter your DeepAI API key">
-                    <p class="text-xs text-gray-400 mt-1">Get your key at <a href="https://deepai.org/" target="_blank" class="text-purple-400 hover:text-purple-300">deepai.org</a></p>
-                </div>
-            </div>
-            <div>
-                <label for="imageModelSelect" class="block text-sm font-medium text-purple-300 mb-2">Image Generation Model:</label>
-                <select id="imageModelSelect" class="w-full p-3 rounded-lg input-field focus:ring-2 focus:ring-purple-500 outline-none">
-                    <optgroup label="DeepAI Models">
-                    <option value="deepai-stable-diffusion" selected>DeepAI Stable Diffusion</option>
-                    <option value="deepai-fantasy-world">DeepAI Fantasy World</option>
-                    <option value="deepai-anime-portrait-v2">DeepAI Anime Portrait v2</option>
-                    <option value="deepai-cute-creature-generator">DeepAI Cute Creature</option>
-                    <option value="deepai-cyberpunk-generator">DeepAI Cyberpunk</option>
-                    <option value="deepai-logo-generator">DeepAI Logo Generator</option>
-                    <option value="deepai-old-school-comic-generator">DeepAI Old-School Comic</option>
-                    </optgroup>
-                    <optgroup label="OpenRouter Models">
-                    <option value="stabilityai/stable-diffusion-3-medium">OpenRouter: SD3 Medium</option>
-                    </optgroup>
-                    <optgroup label="Custom">
-                    <option value="custom_backend">Custom Backend (RunPod, Colab, etc.)</option>
-                    </optgroup>
-                </select>
-            </div>
-            <div id="customBackendUrlContainer" class="hidden mt-4">
-                <label for="customBackendUrlInput" class="block text-sm font-medium text-purple-300 mb-2">Custom Backend URL:</label>
-                <input type="text" id="customBackendUrlInput" class="w-full p-3 rounded-lg input-field focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Enter your public backend URL">
-                <p class="text-xs text-gray-400 mt-1">This should be the public URL provided by your service (e.g., RunPod, ngrok).</p>
-            </div>
-        </div>
-
         <div class="space-y-6">
             <div>
                 <label for="cardNameInput" class="block text-sm font-medium text-purple-300 mb-2">Card Name (optional):</label>
@@ -739,10 +697,9 @@
         const cardDescriptionInput = document.getElementById('cardDescription');
         const descriptionCounter = document.getElementById('descriptionCounter');
         const artStyleSelect = document.getElementById('artStyleSelect');
-        const apiKeyInput = document.getElementById('apiKeyInput');
         const imageModelSelect = document.getElementById('imageModelSelect');
-
-        const deepAiApiKeyInput = document.getElementById('deepAiApiKeyInput');
+        const customBackendUrlContainer = document.getElementById('customBackendUrlContainer');
+        const customBackendUrlInput = document.getElementById('customBackendUrlInput');
 
         // Sub-type elements
         const humanOptions = document.getElementById('humanOptions');
@@ -753,9 +710,6 @@
         const alienSpeciesSelect = document.getElementById('alienSpeciesSelect');
         const zombieAgeSelect = document.getElementById('zombieAgeSelect');
         const powerUpEffectSelect = document.getElementById('powerUpEffectSelect');
-        const customBackendUrlContainer = document.getElementById('customBackendUrlContainer');
-        const customBackendUrlInput = document.getElementById('customBackendUrlInput');
-
         
         const cardDisplayAndActionsArea = document.getElementById('cardDisplayAndActionsArea');
         const cardGrid = document.getElementById('cardGrid');
@@ -793,35 +747,7 @@
         let selectedCardElement = null;
         let generationHistory = [];
         
-        // API Configuration
-        const openRouterBaseUrl = "https://openrouter.ai/api/v1";
         const originalDescriptionPlaceholder = cardDescriptionInput.placeholder; 
-
-        // Load saved API key
-        if (localStorage.getItem('openrouter_api_key')) {
-            apiKeyInput.value = localStorage.getItem('openrouter_api_key');
-        }
-
-        // Save API key on change
-        apiKeyInput.addEventListener('change', () => {
-            if (apiKeyInput.value.trim()) {
-                localStorage.setItem('openrouter_api_key', apiKeyInput.value.trim());
-            } else {
-                localStorage.removeItem('openrouter_api_key');
-            }
-        });
-
-        // Save/load DeepAI API key from local storage
-        deepAiApiKeyInput.addEventListener('change', () => {
-            if (deepAiApiKeyInput.value.trim()) {
-                localStorage.setItem('deepai_api_key', deepAiApiKeyInput.value.trim());
-            } else {
-                localStorage.removeItem('deepai_api_key');
-            }
-        });
-        if (localStorage.getItem('deepai_api_key')) {
-            deepAiApiKeyInput.value = localStorage.getItem('deepai_api_key');
-        }
 
         // Show/hide Custom Backend URL input based on model selection
         imageModelSelect.addEventListener('change', () => {
@@ -918,12 +844,6 @@
 
         // Main card generation function
         generateCardButton.addEventListener('click', async () => {
-            const openRouterApiKey = apiKeyInput.value.trim();
-            if (!openRouterApiKey) {
-                showMessage("Please enter your OpenRouter API key first.", "error");
-                return;
-            }
-
             const userCardName = cardNameInput.value.trim(); 
             const selectedTypeElement = document.querySelector('input[name="cardType"]:checked'); 
             const cardType = selectedTypeElement ? selectedTypeElement.value : "Any";
@@ -947,12 +867,6 @@
                 return;
             }
 
-            const deepAiApiKey = deepAiApiKeyInput.value.trim();
-            if (imageModelSelect.value.startsWith('deepai-') && !deepAiApiKey) {
-                showMessage("Please enter your DeepAI API key for this model.", "error");
-                return;
-            }
-
             const customBackendUrl = customBackendUrlInput.value.trim();
             if (imageModelSelect.value === 'custom_backend' && !customBackendUrl) {
                 showMessage("Please enter the URL for your custom backend.", "error");
@@ -971,41 +885,18 @@
                 // Step 1: Generate card concept with text model
                 showMessage("Creating card concept...", "success");
                 
-                let cardConceptPrompt = `You are a card game designer. Create a detailed card based on:
-                - Card Name: "${userCardName || "Auto-generate"}"
-                - Type: "${cardType}"
-                ${subTypeDetail ? `- ${subTypeDetail}` : ''}
-                - Rarity: "${cardRarity}"
-                - Description: "${description}"
+                const conceptPayload = {
+                    cardName: userCardName,
+                    cardType: cardType,
+                    subTypeDetail: subTypeDetail,
+                    description: description,
+                    rarity: cardRarity
+                };
 
-                The rarity should influence the power of the stats and the epicness of the lore and ability. For example, Legendary cards should have higher stats (e.g., 8-10) and more powerful abilities than Common cards (e.g., 1-3).
-
-                Return ONLY a JSON object with these exact fields:
-                {
-                    "cardName": "Cool name (max 25 chars)",
-                    "cardLore": "Brief lore (max 120 chars)",
-                    "diceRoll": number_between_0_and_12,
-                    "stats": {
-                        "attack": number_between_01_and_10,
-                        "defense": number_between_01_and_10,
-                        "speed": number_between_01_and_10
-                    },
-                    "abilityKeyword": "A short keyword for the ability (e.g., Flying, Taunt, Ambush). Max 15 chars.",
-                    "triggeredAbility": "Rules text for an ability, like 'When this card enters the battlefield, draw a card.' (max 150 chars)",
-                    "imagePrompt": "A detailed, artistic description for an image generator (max 250 chars). This should be a visually rich description of the card's subject."
-                }
-                
-                The card name must be in title case.`;
-
-                const textResponse = await callOpenRouterAPI({
-                    model: "deepseek/deepseek-chat-v3.1:free",
-                    messages: [{ role: "user", content: cardConceptPrompt }],
-                    response_format: { type: "json_object" }
-                }, openRouterApiKey);
-
+                const textResponse = await callBackendAPI('/api/generate-concept', conceptPayload);
                 let cardDataText = textResponse.choices[0].message.content;
-                // Clean the response: LLMs sometimes wrap JSON in ```json ... ```
-                const cleanedCardDataText = cardDataText.replace(/```json\n?|```/g, '').trim();
+                const cleanedCardDataText = cardDataText.replace(/```json
+?|```/g, '').trim();
 
                 currentCardData = JSON.parse(cleanedCardDataText); 
                 currentCardData.rarity = cardRarity;
@@ -1038,21 +929,24 @@
                     const imageModel = imageModelSelect.value;
 
                     let imageUrls = [];
-                    if (imageModel === 'custom_backend') {
-                        // Use the custom backend
-                        const promises = [];
-                        for (let i = 0; i < 4; i++) {
-                            promises.push(callCustomBackendForImage({ url: customBackendUrl, prompt: imagePrompt }));
-                        }
-                        imageUrls = await Promise.all(promises);
-                    } else {
-                        // Use a cloud API (OpenRouter or DeepAI)
-                        const promises = [];
-                        for (let i = 0; i < 4; i++) {
-                            promises.push(callImageGenerationApi({ model: imageModel, prompt: imagePrompt, openRouterApiKey, deepAiApiKey }));
-                        }
-                        imageUrls = await Promise.all(promises);
+                    const imagePromises = [];
+                    for (let i = 0; i < 4; i++) {
+                        const imagePayload = {
+                            model: imageModel,
+                            prompt: imagePrompt,
+                            customBackendUrl: customBackendUrl // Pass this along
+                        };
+                        imagePromises.push(callBackendAPI('/api/generate-image', imagePayload));
                     }
+                    
+                    const imageResults = await Promise.all(imagePromises);
+                    
+                    imageUrls = imageResults.map(res => {
+                        if (res.data && res.data[0] && res.data[0].url) return res.data[0].url; // OpenRouter
+                        if (res.output_url) return res.output_url; // DeepAI & potentially custom
+                        return null;
+                    }).filter(url => url !== null);
+
 
                     if (imageUrls.length > 0) {
                         imageLoader.classList.add('hidden');
@@ -1146,129 +1040,26 @@
             }
         });
 
-        // Generic OpenRouter API call function
-        async function callOpenRouterAPI(payload, apiKey) {
-            const response = await fetch(`${openRouterBaseUrl}/chat/completions`, {
+        // Generic Backend API call function
+        async function callBackendAPI(endpoint, payload) {
+            const response = await fetch(endpoint, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`,
-                    'HTTP-Referer': window.location.origin,
-                    'X-Title': 'AI Card Generator'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
 
             if (!response.ok) {
-                const errorData = await response.text();
-                let errorMessage;
-                try {
-                    const errorJson = JSON.parse(errorData);
-                    errorMessage = errorJson.error?.message || `API error: ${response.status}`;
-                } catch {
-                    errorMessage = `API error: ${response.status} - ${errorData}`;
-                }
-                throw new Error(errorMessage);
+                const errorData = await response.json();
+                throw new Error(errorData.error || `API error: ${response.status}`);
             }
 
             return await response.json();
         }
 
-        // Unified function for calling image generation APIs directly from the client
-        async function callImageGenerationApi(payload) {
-            let response;
-            const { model, prompt, openRouterApiKey, deepAiApiKey } = payload;
-
-            if (model.startsWith('deepai-')) {
-                // --- DeepAI API Call ---                
-                // Use the standard text2img for the base models, but specific endpoints for styled models.
-                let deepAiModelName = model.substring('deepai-'.length);
-                let DEEPAI_API_URL = `https://api.deepai.org/api/${deepAiModelName}`;
-                if (deepAiModelName === 'stable-diffusion' || deepAiModelName === 'fantasy-world') {
-                    DEEPAI_API_URL = 'https://api.deepai.org/api/text2img';
-                }
-
-                const formData = new FormData();
-                formData.append('text', prompt);
-                // The standard 'text2img' endpoint does not take a model parameter,
-                // but the other styled endpoints do.
-                if (deepAiModelName !== 'stable-diffusion' && deepAiModelName !== 'fantasy-world') {
-                    formData.append('model', deepAiModelName);
-                }
-
-                response = await fetch(DEEPAI_API_URL, {
-                    method: 'POST',
-                    headers: { 'api-key': deepAiApiKey },
-                    body: formData
-                });
-
-            } else {
-                // --- OpenRouter API Call ---
-                const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/images/generations';
-                response = await fetch(OPENROUTER_API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${openRouterApiKey}`,
-                    },
-                    body: JSON.stringify({
-                        model: model,
-                        prompt: prompt,
-                        n: 1,
-                        size: "1024x1024"
-                    })
-                });
-            }
-
-            if (!response.ok) {
-                let errorMessage = `Image Generation Error: ${response.status}`;
-                try {
-                    const errorData = await response.json();
-                    errorMessage = errorData.error?.message || errorData.err || `API returned an error.`;
-                } catch (e) {
-                    errorMessage = `An unexpected API error occurred (Status: ${response.status}).`;
-                }
-                throw new Error(errorMessage);
-            }
-
-            const result = await response.json();
-            // Handle different response structures
-            if (result.data && result.data[0] && result.data[0].url) {
-                return result.data[0].url; // OpenRouter response
-            } else if (result.output_url) {
-                return result.output_url; // DeepAI response
-            }
-            throw new Error("Unknown API response structure for image URL.");
-        }
-
-        // Function for Custom Backend image generation (RunPod, Colab, etc.)
-        async function callCustomBackendForImage(payload) {
-            const response = await fetch(payload.url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Bypass-Tunnel-Reminder': 'true' // Useful for ngrok tunnels
-                },
-                body: JSON.stringify({
-                    prompt: payload.prompt
-                })
-            });
-
-            if (!response.ok) {
-                let errorMessage = `Custom Backend Error: ${response.status}`;
-                try {
-                    const errorData = await response.json();
-                    errorMessage += ` - ${errorData.error || JSON.stringify(errorData)}`;
-                } catch (e) {
-                    // Could not parse JSON from the error response
-                    const textError = await response.text();
-                    errorMessage += ` - ${textError}`;
-                }
-                throw new Error(errorMessage);
-            }
-            // The backend should return the image file directly
-            const blob = await response.blob();
-            return URL.createObjectURL(blob);
+        // Text generation helper
+        async function callBackendForText(prompt) {
+            const response = await callBackendAPI('/api/generate-text', { prompt });
+            return response.choices[0].message.content;
         }
 
         function createCardHTML(cardData, imageUrl) {
@@ -1316,26 +1107,10 @@
                 <div class="card-overlay-layer"></div>`;
         }
 
-        // Text generation helper
-        async function callOpenRouterForText(prompt, apiKey) {
-            const response = await callOpenRouterAPI({
-                model: "openrouter/sonoma-sky-alpha",
-                messages: [{ role: "user", content: prompt }]
-            }, apiKey);
-            
-            return response.choices[0].message.content;
-        }
-
         // Regenerate lore function (called by buttons on cards)
         async function handleLoreRegeneration() {
             if (!currentCardData) {
                 showMessage("No card data available to regenerate lore.", "error");
-                return;
-            }
-            
-            const openRouterApiKey = apiKeyInput.value.trim();
-            if (!openRouterApiKey) {
-                showMessage("Please enter your OpenRouter API key.", "error");
                 return;
             }
 
@@ -1355,7 +1130,7 @@
             Return ONLY the lore text, nothing else.`;
             
             try {
-                const newLore = await callOpenRouterForText(lorePrompt, openRouterApiKey);
+                const newLore = await callBackendForText(lorePrompt);
                 currentCardData.cardLore = newLore.trim(); 
                 
                 // Update lore on all visible cards
@@ -1398,12 +1173,6 @@
                 return; 
             }
             
-            const openRouterApiKey = apiKeyInput.value.trim();
-            if (!openRouterApiKey) {
-                showMessage("Please enter your OpenRouter API key.", "error");
-                return;
-            }
-
             expandLoreLoader.classList.remove('hidden'); 
             expandedLoreDisplay.classList.add('hidden'); 
             
@@ -1414,7 +1183,7 @@
             Provide rich backstory, abilities details, and world context. Return only the expanded text.`;
             
             try {
-                const expandedText = await callOpenRouterForText(lorePrompt, openRouterApiKey);
+                const expandedText = await callBackendForText(lorePrompt);
                 
                 expandedLoreDisplay.innerHTML = '';
                 const saveButton = document.createElement('a');
@@ -1424,7 +1193,8 @@
                 saveButton.textContent = 'Save Lore';
                 
                 const textContent = document.createElement('div');
-                textContent.innerHTML = expandedText.replace(/\n/g, '<br>');
+                textContent.innerHTML = expandedText.replace(/
+/g, '<br>');
 
                 expandedLoreDisplay.appendChild(saveButton);
                 expandedLoreDisplay.appendChild(textContent);
@@ -1445,12 +1215,6 @@
                 showMessage("Please generate a card first.", "error"); 
                 return; 
             }
-            
-            const openRouterApiKey = apiKeyInput.value.trim();
-            if (!openRouterApiKey) {
-                showMessage("Please enter your OpenRouter API key.", "error");
-                return;
-            }
 
             suggestSynergiesLoader.classList.remove('hidden'); 
             synergiesDisplay.classList.add('hidden'); 
@@ -1468,9 +1232,7 @@
             {"synergies": [{"conceptName": "Name", "conceptDescription": "Brief description", "synergyExplanation": "How they work together"}]}`;
             
             try {
-                const synergyText = await callOpenRouterForText(synergyPrompt, openRouterApiKey);
-                // More robust JSON cleaning: Find the first '{' and the last '}' to extract the JSON object,
-                // in case the model adds extra text before or after the JSON.
+                const synergyText = await callBackendForText(synergyPrompt);
                 const firstBrace = synergyText.indexOf('{');
                 const lastBrace = synergyText.lastIndexOf('}');
                 if (firstBrace === -1 || lastBrace === -1) {
@@ -1496,7 +1258,6 @@
                     synergyData.synergies.forEach(syn => {
                         const synEl = document.createElement('div'); 
                         synEl.className = 'p-3 bg-gray-700/50 rounded-lg border border-purple-500/20';
-                        // Add a data attribute to store the synergy data
                         synEl.dataset.synergyData = JSON.stringify(syn);
                         synEl.innerHTML = `
                             <div class="flex justify-between items-start">
@@ -1532,19 +1293,15 @@
 
                 const synergyData = JSON.parse(synergyItem.dataset.synergyData);
 
-                // 1. Set the input fields
                 cardNameInput.value = synergyData.conceptName;
                 cardDescriptionInput.value = synergyData.conceptDescription;
 
-                // 2. Set the card type to "Power Up" as synergies are often items/abilities
                 const powerUpRadio = document.querySelector('input[name="cardType"][value="Power Up"]');
                 if (powerUpRadio) {
                     powerUpRadio.checked = true;
-                    // Manually trigger the change event to update UI and thematic prompts
                     powerUpRadio.dispatchEvent(new Event('change', { bubbles: true }));
                 }
 
-                // 3. Scroll to top and trigger the main generate button
                 window.scrollTo({ top: 0, behavior: 'smooth' });
                 generateCardButton.click();
             }
@@ -1576,7 +1333,7 @@
             const options = { allowTaint: true, useCORS: true, scale: 2, backgroundColor: 'transparent' };
 
             const promises = cardElements.map(async (el, i) => {
-                el.classList.add('exporting-card'); // Ensure all parts are visible
+                el.classList.add('exporting-card'); 
                 try {
                     const canvas = await html2canvas(el, options);
                     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
@@ -1586,7 +1343,7 @@
                     console.error(`Error rendering card ${i + 1} for zip:`, err);
                     showMessage(`Error rendering card ${i + 1}.`, "error");
                 } finally {
-                    el.classList.remove('exporting-card'); // Clean up
+                    el.classList.remove('exporting-card'); 
                 }
             });
 
@@ -1618,18 +1375,16 @@
             
             showMessage("Preparing PNG export...", "success");
             
-            // Temporarily apply a class to ensure all elements are visible for capture
             selectedCardElement.classList.add('exporting-card');
 
             const options = { 
                 allowTaint: true, 
                 useCORS: true, 
                 scale: 2, 
-                backgroundColor: 'transparent', // Use transparent to respect rounded corners
+                backgroundColor: 'transparent', 
                 logging: false 
             };
             
-            // Use a short timeout to allow the DOM to update with the new class
             setTimeout(() => {
                 html2canvas(selectedCardElement, options).then(canvas => {
                     const imageURI = canvas.toDataURL('image/png');
@@ -1645,7 +1400,6 @@
                     console.error("Error exporting card:", err); 
                     showMessage("Export error: " + err.message, "error");
                 }).finally(() => {
-                    // Clean up the temporary class
                     selectedCardElement.classList.remove('exporting-card');
                 });
             }, 100);
@@ -1659,7 +1413,6 @@
 
         function closeImageModal() {
             imageModal.classList.remove('visible');
-            // Optional: clear src to prevent showing old image briefly on next open
             setTimeout(() => { modalImage.src = ''; }, 300); 
         }
 
@@ -1689,9 +1442,6 @@
         }
 
         // --- History Functions ---
-
-        // Note: This function converts blob URLs from Stability v2 API to base64 strings
-        // so they can be saved in localStorage and persist across sessions.
         async function convertBlobUrlToBase64(blobUrl) {
             const response = await fetch(blobUrl);
             const blob = await response.blob();
@@ -1704,37 +1454,33 @@
         }
 
         async function saveToHistory(cardData, imageUrls) {
-            // Convert any blob URLs to base64 before saving
             const persistentImageUrls = await Promise.all(
                 imageUrls.map(url => url.startsWith('blob:') ? convertBlobUrlToBase64(url) : url)
             );
 
             const historyEntry = {
-                cardData: JSON.parse(JSON.stringify(cardData)), // Deep copy
+                cardData: JSON.parse(JSON.stringify(cardData)), 
                 imageUrls: persistentImageUrls
             };
 
-            // Add the new entry
             generationHistory.unshift(historyEntry);
 
-            // Try to save, and if it fails due to quota, remove the oldest item and retry.
             while (generationHistory.length > 0) {
                 try {
                     localStorage.setItem('cardGenerationHistory', JSON.stringify(generationHistory));
-                    break; // Success! Exit the loop.
+                    break; 
                 } catch (e) {
                     if ((e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
                         console.warn('LocalStorage quota exceeded. Removing oldest history item.');
                         if (generationHistory.length <= 1) {
-                            // The new item itself is too large to be saved.
                             console.error("The latest card generation is too large to save to history, even by itself. It will not be saved.");
-                            generationHistory.shift(); // Remove the new, oversized item.
-                            break; // Exit the loop, preserving the rest of the history.
+                            generationHistory.shift(); 
+                            break; 
                         }
-                        generationHistory.pop(); // Remove the oldest entry
+                        generationHistory.pop(); 
                     } else {
                         console.error('Failed to save history:', e);
-                        break; // Some other error, break the loop
+                        break; 
                     }
                 }
             }
@@ -1778,14 +1524,9 @@
                 const cardElement = document.createElement('div');
                 cardElement.className = 'card-instance';
                 cardElement.innerHTML = createCardHTML(currentCardData, url);
-                // This is a simplified re-creation. A full implementation would reuse the
-                // card creation logic from the main function to apply styles and listeners.
                 cardGrid.appendChild(cardElement);
             });
             
-            // A more robust solution would be to refactor the card display logic into a single function
-            // that can be called both by the main generator and this history loader.
-
             closeHistoryModal();
             showMessage(`Loaded "${currentCardData.cardName}" from history.`, 'success');
         }
@@ -1816,6 +1557,5 @@
 
         // Initial Load
         loadHistory();
-    </script>
-</body>
+    </script></body>
 </html>
