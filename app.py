@@ -56,14 +56,22 @@ Return ONLY a JSON object with these exact fields:
 
 The card name must be in title case."""
 
+        headers = {
+            "Authorization": f"Bearer {open_router_api_key}",
+            "Content-Type": "application/json",
+        }
+
+        referer = os.environ.get('OPENROUTER_REFERER')
+        if referer:
+            headers["HTTP-Referer"] = referer
+
+        title = os.environ.get('OPENROUTER_TITLE')
+        if title:
+            headers["X-Title"] = title
+
         response = requests.post(
             "https://openrouter.ai/api/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {open_router_api_key}",
-                "Content-Type": "application/json",
-                "HTTP-Referer": "http://localhost:3000", # Can be changed to actual domain
-                "X-Title": "AI Card Generator"
-            },
+            headers=headers,
             json={
                 "model": "deepseek/deepseek-chat-v3.1:free",
                 "messages": [{"role": "user", "content": card_concept_prompt}],
@@ -137,12 +145,22 @@ def generate_image():
                 if not api_key:
                     return jsonify({'error': 'OPENROUTER_API_KEY not set on the server'}), 500
 
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                }
+
+                referer = os.environ.get('OPENROUTER_REFERER')
+                if referer:
+                    headers["HTTP-Referer"] = referer
+
+                title = os.environ.get('OPENROUTER_TITLE')
+                if title:
+                    headers["X-Title"] = title
+
                 response = requests.post(
                     "https://openrouter.ai/api/v1/images/generations",
-                    headers={
-                        "Authorization": f"Bearer {api_key}",
-                        "Content-Type": "application/json"
-                    },
+                    headers=headers,
                     json={
                         "model": model,
                         "prompt": prompt,

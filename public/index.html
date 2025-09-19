@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Card Generator (LOCAL TEST)</title>
+    <title>AI Card Generator</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -24,82 +24,82 @@
             background: linear-gradient(145deg, #2a2a4e, #1a1a2e);
             border: 2px solid #4a4a7e;
             box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 10px 20px rgba(127,90,240,0.1);
-            width: 320px; 
-            height: 480px; 
-            position: relative; 
-            overflow: hidden; 
-            border-radius: 1rem; 
+            width: 320px;
+            height: 480px;
+            position: relative;
+            overflow: hidden;
+            border-radius: 1rem;
             backdrop-filter: blur(10px);
             transition: border-color 0.5s ease;
         }
-        .card-art-area { 
+        .card-art-area {
             position: absolute;
-            top: 0; 
+            top: 0;
             left: 0;
-            width: 100%; 
-            height: 100%; 
-            z-index: 0; 
-            overflow: hidden; 
-        }
-        .card-image-display { 
-            display: block; 
-            width: 100%; 
+            width: 100%;
             height: 100%;
-            object-fit: cover; 
+            z-index: 0;
+            overflow: hidden;
+        }
+        .card-image-display {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
             transition: all 0.3s ease;
         }
-        #imagePlaceholderText, #imageLoader { 
-            color: #ccc; 
-            position: absolute; 
+        #imagePlaceholderText, #imageLoader {
+            color: #ccc;
+            position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            z-index: 1; 
+            z-index: 1;
             text-align: center;
             font-size: 0.9rem;
         }
-        .loader { 
-            border: 4px solid #4a4a7e; 
-            border-top: 4px solid #7f5af0; 
-            border-radius: 50%; 
-            width: 40px; 
-            height: 40px; 
-            animation: spin 1s linear infinite; 
-            margin: 20px auto; 
+        .loader {
+            border: 4px solid #4a4a7e;
+            border-top: 4px solid #7f5af0;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
         }
-        .small-loader { 
-            width: 20px; 
-            height: 20px; 
-            border-width: 2px; 
-            display: inline-block; 
-            margin-left: 8px; 
+        .small-loader {
+            width: 20px;
+            height: 20px;
+            border-width: 2px;
+            display: inline-block;
+            margin-left: 8px;
         }
-        @keyframes spin { 
-            0% { transform: rotate(0deg); } 
-            100% { transform: rotate(360deg); } 
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
-        
-        .card-overlay-layer { 
+
+        .card-overlay-layer {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(180deg, 
-                rgba(0,0,0,0.1) 0%, 
-                rgba(0,0,0,0.3) 30%, 
-                rgba(0,0,0,0.4) 70%, 
+            background: linear-gradient(180deg,
+                rgba(0,0,0,0.1) 0%,
+                rgba(0,0,0,0.3) 30%,
+                rgba(0,0,0,0.4) 70%,
                 rgba(0,0,0,0.8) 100%);
-            z-index: 10; 
-            pointer-events: none; 
+            z-index: 10;
+            pointer-events: none;
         }
-        
+
         .card-name-area {
             position: absolute;
-            top: 25px; 
-            left: 65px; 
-            right: 20px; 
-            height: 40px; 
+            top: 25px;
+            left: 65px;
+            right: 20px;
+            height: 40px;
             display: flex;
             align-items: center;
-            z-index: 11; 
+            z-index: 11;
             background: rgba(0,0,0,0.3);
             border-radius: 8px;
             padding: 0 15px;
@@ -107,32 +107,32 @@
             transition: background-color 0.5s ease;
         }
         #cardNameDisplay {
-            font-size: 1.1rem; 
+            font-size: 1.1rem;
             font-weight: bold;
-            color: #fff; 
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.9); 
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.9);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             letter-spacing: 0.5px;
         }
 
-        .card-lore-area { 
+        .card-lore-area {
             flex: 1;
             height: 100%;
             display: flex;
             flex-direction: column;
-            font-size: 0.7rem; 
+            font-size: 0.7rem;
             line-height: 1.4;
-            color: #f0f0f0; 
+            color: #f0f0f0;
             padding: 8px 12px;
-            background: rgba(0,0,0,0.6); 
+            background: rgba(0,0,0,0.6);
             border-radius: 8px;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.1);
         }
-        .card-lore-text { 
+        .card-lore-text {
              flex-grow: 1;
              overflow-y: auto;
         }
@@ -186,17 +186,17 @@
         .stat-defense { background: rgba(59,130,246,0.5); }
         .stat-speed { background: rgba(34,197,94,0.5); }
 
-        .stat-special-ability-area { 
+        .stat-special-ability-area {
             position: absolute;
-            bottom: 5px; 
-            left: 20px; 
+            bottom: 5px;
+            left: 20px;
             right: 20px;
             height: 24px;
             z-index: 11;
             text-align: center;
             font-size: 0.8rem;
-            color: #fff; 
-            background: rgba(127,90,240,0.6); 
+            color: #fff;
+            background: rgba(127,90,240,0.6);
             border-radius: 8px;
             font-weight: bold;
             overflow: hidden;
@@ -236,53 +236,53 @@
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
 
-        .button-primary, .button-secondary, .button-export, .button-save, .button-regenerate { 
-            padding: 0.75rem 1.25rem; 
-            border-radius: 0.5rem; 
-            font-weight: 600; 
-            transition: all 0.3s ease; 
-            text-align: center; 
+        .button-primary, .button-secondary, .button-export, .button-save, .button-regenerate {
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-align: center;
             border: none;
             cursor: pointer;
         }
-        .button-primary { 
-            background: linear-gradient(135deg, #7f5af0, #9333ea); 
-            color: white; 
+        .button-primary {
+            background: linear-gradient(135deg, #7f5af0, #9333ea);
+            color: white;
             box-shadow: 0 4px 15px rgba(127,90,240,0.3);
-        } 
-        .button-primary:hover { 
-            background: linear-gradient(135deg, #6a48d0, #7c3aed); 
+        }
+        .button-primary:hover {
+            background: linear-gradient(135deg, #6a48d0, #7c3aed);
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(127,90,240,0.4);
         }
-        .button-secondary { 
-            background: rgba(74, 74, 126, 0.8); 
-            color: #e0e0e0; 
+        .button-secondary {
+            background: rgba(74, 74, 126, 0.8);
+            color: #e0e0e0;
             backdrop-filter: blur(10px);
-        } 
-        .button-secondary:hover { 
-            background: rgba(90, 90, 142, 0.9); 
+        }
+        .button-secondary:hover {
+            background: rgba(90, 90, 142, 0.9);
             transform: translateY(-1px);
         }
-        .button-export { 
-            background: linear-gradient(135deg, #22c55e, #16a34a); 
-            color: white; 
+        .button-export {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
             box-shadow: 0 4px 15px rgba(34,197,94,0.3);
-        } 
-        .button-export:hover { 
-            background: linear-gradient(135deg, #16a34a, #15803d); 
+        }
+        .button-export:hover {
+            background: linear-gradient(135deg, #16a34a, #15803d);
             transform: translateY(-2px);
         }
-        .button-save { 
-            background: linear-gradient(135deg, #0ea5e9, #0284c7); 
-            color: white; 
-            font-size: 0.75rem; 
-            padding: 0.5rem 0.75rem; 
-            margin-top: 0.5rem; 
+        .button-save {
+            background: linear-gradient(135deg, #0ea5e9, #0284c7);
+            color: white;
+            font-size: 0.75rem;
+            padding: 0.5rem 0.75rem;
+            margin-top: 0.5rem;
             display: inline-block;
-        } 
-        .button-save:hover { 
-            background: linear-gradient(135deg, #0284c7, #0369a1); 
+        }
+        .button-save:hover {
+            background: linear-gradient(135deg, #0284c7, #0369a1);
             transform: translateY(-1px);
         }
         .button-regenerate {
@@ -304,83 +304,83 @@
             flex-shrink: 0;
             margin-left: auto;
         }
-        .button-regenerate:hover { 
-            opacity: 1; 
-            background: rgba(127,90,240,0.8); 
+        .button-regenerate:hover {
+            opacity: 1;
+            background: rgba(127,90,240,0.8);
             transform: scale(1.1);
         }
 
-        .input-field { 
-            background: rgba(42, 42, 78, 0.8); 
-            border: 1px solid rgba(74, 74, 126, 0.8); 
-            color: #e0e0e0; 
+        .input-field {
+            background: rgba(42, 42, 78, 0.8);
+            border: 1px solid rgba(74, 74, 126, 0.8);
+            color: #e0e0e0;
             backdrop-filter: blur(10px);
             transition: all 0.3s ease;
-        } 
+        }
         .input-field:focus {
             border-color: #7f5af0;
             box-shadow: 0 0 0 3px rgba(127,90,240,0.1);
             background: rgba(42, 42, 78, 0.9);
         }
         .input-field::placeholder { color: #999; }
-        
+
         .radio-label input[type="radio"] { opacity: 0; width: 0; height: 0; }
-        .radio-label span { 
-            display: inline-block; 
-            padding: 0.6rem 1.2rem; 
-            background: rgba(42, 42, 78, 0.8); 
-            border: 1px solid rgba(74, 74, 126, 0.8); 
-            border-radius: 0.5rem; 
-            cursor: pointer; 
-            transition: all 0.3s ease; 
+        .radio-label span {
+            display: inline-block;
+            padding: 0.6rem 1.2rem;
+            background: rgba(42, 42, 78, 0.8);
+            border: 1px solid rgba(74, 74, 126, 0.8);
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
             margin-right: 0.5rem;
             backdrop-filter: blur(10px);
         }
-        .radio-label input[type="radio"]:checked + span { 
-            background: linear-gradient(135deg, #7f5af0, #9333ea); 
-            border-color: #7f5af0; 
-            color: white; 
+        .radio-label input[type="radio"]:checked + span {
+            background: linear-gradient(135deg, #7f5af0, #9333ea);
+            border-color: #7f5af0;
+            color: white;
             transform: translateY(-2px);
             box-shadow: 0 4px 15px rgba(127,90,240,0.3);
         }
-        .radio-label:hover span { 
-            background: rgba(58, 58, 94, 0.9); 
+        .radio-label:hover span {
+            background: rgba(58, 58, 94, 0.9);
             transform: translateY(-1px);
         }
-        
-        .message-box { 
-            padding: 1rem 1.5rem; 
-            border-radius: 0.75rem; 
-            margin-bottom: 1rem; 
-            font-size: 0.9rem; 
+
+        .message-box {
+            padding: 1rem 1.5rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.1);
         }
-        .message-box-success { 
-            background: rgba(16, 185, 129, 0.2); 
-            color: #6ee7b7; 
+        .message-box-success {
+            background: rgba(16, 185, 129, 0.2);
+            color: #6ee7b7;
             border-color: rgba(16, 185, 129, 0.3);
-        } 
-        .message-box-error { 
-            background: rgba(239, 68, 68, 0.2); 
-            color: #fca5a5; 
+        }
+        .message-box-error {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
             border-color: rgba(239, 68, 68, 0.3);
         }
-        
-        .section-title { 
-            color: #a78bfa; 
+
+        .section-title {
+            color: #a78bfa;
             text-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
-        .card-actions-container { 
-            width: 100%; 
-            max-width: 320px; 
-            margin-top: 1.5rem; 
+        .card-actions-container {
+            width: 100%;
+            max-width: 320px;
+            margin-top: 1.5rem;
         }
-        .feature-display-area { 
-            margin-top: 1rem; 
-            padding: 1rem; 
-            background: rgba(42, 42, 78, 0.6); 
-            border-radius: 0.75rem; 
+        .feature-display-area {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(42, 42, 78, 0.6);
+            border-radius: 0.75rem;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.1);
         }
@@ -388,11 +388,11 @@
             background: linear-gradient(145deg, #2a2a4e, #1a1a2e);
             border: 2px solid #4a4a7e;
             box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 10px 20px rgba(127,90,240,0.1);
-            width: 320px; 
-            height: 480px; 
-            position: relative; 
-            overflow: hidden; 
-            border-radius: 1rem; 
+            width: 320px;
+            height: 480px;
+            position: relative;
+            overflow: hidden;
+            border-radius: 1rem;
             backdrop-filter: blur(10px);
             transition: all 0.3s ease;
             cursor: pointer;
@@ -419,9 +419,9 @@
         }
 
         .config-grid {
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 1rem; 
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
         }
 
         @media (max-width: 640px) {
@@ -535,7 +535,7 @@
 
         .view-art-button:hover {
             opacity: 1;
-            background: rgba(127,90,240,0.8); 
+            background: rgba(127,90,240,0.8);
             transform: scale(1.1) !important;
         }
 
@@ -549,7 +549,7 @@
 
     <div class="w-full max-w-4xl p-6 sm:p-8 glass-card rounded-2xl shadow-2xl space-y-8">
         <header class="text-center">
-            <h1 class="text-4xl sm:text-5xl font-bold text-white mb-2">AI Card Generator (LOCAL)</h1>
+            <h1 class="text-4xl sm:text-5xl font-bold text-white mb-2">AI Card Generator</h1>
             <p class="text-purple-300 text-lg">Powered by OpenRouter & DeepAI - Design unique cards with AI</p>
         </header>
         <div class="space-y-6">
@@ -557,7 +557,7 @@
                 <label for="cardNameInput" class="block text-sm font-medium text-purple-300 mb-2">Card Name (optional):</label>
                 <input type="text" id="cardNameInput" class="w-full p-3 rounded-lg input-field focus:ring-2 focus:ring-purple-500 outline-none" placeholder="e.g., 'Commander Rex' or 'Xylar the Conqueror'">
             </div>
-            
+
             <div>
                 <label class="block text-sm font-medium text-purple-300 mb-2">Card Type:</label>
                 <div class="flex flex-wrap gap-2" id="cardTypeSelector">
@@ -608,7 +608,7 @@
                 </div>
             </div>
             <!-- End Conditional Sub-Type Options -->
-            
+
             <div>
                 <label for="cardDescription" class="block text-sm font-medium text-purple-300 mb-2">Describe Appearance & Abilities:</label>
                 <textarea id="cardDescription" rows="3" class="w-full p-3 rounded-lg input-field focus:ring-2 focus:ring-purple-500 outline-none" placeholder="e.g., 'A battle-hardened soldier with a laser rifle and cybernetic implants'"></textarea>
@@ -620,7 +620,7 @@
                 .rarity-legendary { color: #facc15; }
             </style>
             </div>
-            
+
             <button id="generateCardButton" class="w-full button-primary text-lg py-4">Generate Card</button>
         </div>
 
@@ -632,7 +632,7 @@
                 <h2 class="text-3xl font-semibold section-title">Your Generated Cards</h2>
                 <p class="text-purple-300 mt-1">Four variations based on your prompt. Click a card to see actions.</p>
             </div>
-            
+
             <div id="imageLoader" class="loader hidden"></div>
             <div id="cardGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 justify-items-center">
                 <!-- Cards will be dynamically inserted here -->
@@ -692,8 +692,8 @@
     <script>
         // DOM Elements
         const generateCardButton = document.getElementById('generateCardButton');
-        const cardNameInput = document.getElementById('cardNameInput'); 
-        const cardTypeSelector = document.getElementById('cardTypeSelector'); 
+        const cardNameInput = document.getElementById('cardNameInput');
+        const cardTypeSelector = document.getElementById('cardTypeSelector');
         const cardDescriptionInput = document.getElementById('cardDescription');
         const descriptionCounter = document.getElementById('descriptionCounter');
         const artStyleSelect = document.getElementById('artStyleSelect');
@@ -710,7 +710,7 @@
         const alienSpeciesSelect = document.getElementById('alienSpeciesSelect');
         const zombieAgeSelect = document.getElementById('zombieAgeSelect');
         const powerUpEffectSelect = document.getElementById('powerUpEffectSelect');
-        
+
         const cardDisplayAndActionsArea = document.getElementById('cardDisplayAndActionsArea');
         const cardGrid = document.getElementById('cardGrid');
         const cardActionsContainer = document.getElementById('cardActionsContainer');
@@ -726,7 +726,7 @@
         const suggestSynergiesButton = document.getElementById('suggestSynergiesButton');
         const synergiesDisplay = document.getElementById('synergiesDisplay');
         const suggestSynergiesLoader = document.getElementById('suggestSynergiesLoader');
-        const exportPngButton = document.getElementById('exportPngButton'); 
+        const exportPngButton = document.getElementById('exportPngButton');
         const downloadAllZipButton = document.getElementById('downloadAllZipButton');
 
         // Modal elements
@@ -742,12 +742,12 @@
         const clearHistoryButton = document.getElementById('clearHistoryButton');
 
         // State variables
-        let currentCardData = null; 
-        let currentCardStats = {}; 
+        let currentCardData = null;
+        let currentCardStats = {};
         let selectedCardElement = null;
         let generationHistory = [];
-        
-        const originalDescriptionPlaceholder = cardDescriptionInput.placeholder; 
+
+        const originalDescriptionPlaceholder = cardDescriptionInput.placeholder;
 
         // Show/hide Custom Backend URL input based on model selection
         imageModelSelect.addEventListener('change', () => {
@@ -802,17 +802,17 @@
                     break;
                 case "Any":
                 default:
-                    thematicPrompt = ""; 
-                    descriptionPlaceholder = originalDescriptionPlaceholder; 
-                    break; 
+                    thematicPrompt = "";
+                    descriptionPlaceholder = originalDescriptionPlaceholder;
+                    break;
             }
             // Only set the thematic prompt if the user hasn't typed anything custom for that type yet
             if (cardDescriptionInput.value === '' || cardDescriptionInput.value.startsWith('A resilient human') || cardDescriptionInput.value.startsWith('An extraterrestrial') || cardDescriptionInput.value.startsWith('An undead creature') || cardDescriptionInput.value.startsWith('A powerful enhancement')) {
                  cardDescriptionInput.value = thematicPrompt;
             }
-            cardDescriptionInput.placeholder = descriptionPlaceholder; 
+            cardDescriptionInput.placeholder = descriptionPlaceholder;
         });
-        
+
         // Automatically determine rarity based on description length
         const getRarityFromDescription = (desc) => {
             const len = desc.length;
@@ -844,8 +844,8 @@
 
         // Main card generation function
         generateCardButton.addEventListener('click', async () => {
-            const userCardName = cardNameInput.value.trim(); 
-            const selectedTypeElement = document.querySelector('input[name="cardType"]:checked'); 
+            const userCardName = cardNameInput.value.trim();
+            const selectedTypeElement = document.querySelector('input[name="cardType"]:checked');
             const cardType = selectedTypeElement ? selectedTypeElement.value : "Any";
             const description = cardDescriptionInput.value.trim();
             const cardRarity = getRarityFromDescription(description);
@@ -862,8 +862,8 @@
                 subTypeDetail = `Effect: ${powerUpEffectSelect.value}`;
             }
 
-            if (!description && !userCardName) { 
-                showMessage("Please provide a character name or description.", "error"); 
+            if (!description && !userCardName) {
+                showMessage("Please provide a character name or description.", "error");
                 return;
             }
 
@@ -876,15 +876,15 @@
             clearMessages();
             loadingIndicator.classList.remove('hidden');
             cardDisplayAndActionsArea.classList.add('hidden');
-            
-            currentCardData = null; 
-            currentCardStats = {}; 
+
+            currentCardData = null;
+            currentCardStats = {};
             selectedCardElement = null;
 
             try {
                 // Step 1: Generate card concept with text model
                 showMessage("Creating card concept...", "success");
-                
+
                 const conceptPayload = {
                     cardName: userCardName,
                     cardType: cardType,
@@ -898,9 +898,9 @@
                 const cleanedCardDataText = cardDataText.replace(/```json
 ?|```/g, '').trim();
 
-                currentCardData = JSON.parse(cleanedCardDataText); 
+                currentCardData = JSON.parse(cleanedCardDataText);
                 currentCardData.rarity = cardRarity;
-                currentCardStats = currentCardData.stats; 
+                currentCardStats = currentCardData.stats;
 
                 cardDisplayAndActionsArea.classList.remove('hidden');
                 cardActionsContainer.classList.add('hidden');
@@ -938,9 +938,9 @@
                         };
                         imagePromises.push(callBackendAPI('/api/generate-image', imagePayload));
                     }
-                    
+
                     const imageResults = await Promise.all(imagePromises);
-                    
+
                     imageUrls = imageResults.map(res => {
                         if (res.data && res.data[0] && res.data[0].url) return res.data[0].url; // OpenRouter
                         if (res.output_url) return res.output_url; // DeepAI & potentially custom
@@ -960,24 +960,24 @@
                             let nameBackgroundColor = 'rgba(0,0,0,0.3)';
                             let diceRollBackgroundColor = 'linear-gradient(145deg, #0ea5e9, #0284c7)'; // Default blue
                             switch (currentCardData.rarity) {
-                                case 'Common': 
-                                    borderColor = '#9ca3af'; nameBackgroundColor = 'rgba(156, 163, 175, 0.4)'; 
+                                case 'Common':
+                                    borderColor = '#9ca3af'; nameBackgroundColor = 'rgba(156, 163, 175, 0.4)';
                                     diceRollBackgroundColor = 'linear-gradient(145deg, #6b7280, #4b5563)'; // Gray
                                     break;
-                                case 'Uncommon': 
-                                    borderColor = '#4ade80'; nameBackgroundColor = 'rgba(74, 222, 128, 0.4)'; 
+                                case 'Uncommon':
+                                    borderColor = '#4ade80'; nameBackgroundColor = 'rgba(74, 222, 128, 0.4)';
                                     diceRollBackgroundColor = 'linear-gradient(145deg, #34d399, #10b981)'; // Green
                                     break;
-                                case 'Rare': 
-                                    borderColor = '#60a5fa'; nameBackgroundColor = 'rgba(96, 165, 250, 0.4)'; 
+                                case 'Rare':
+                                    borderColor = '#60a5fa'; nameBackgroundColor = 'rgba(96, 165, 250, 0.4)';
                                     diceRollBackgroundColor = 'linear-gradient(145deg, #3b82f6, #2563eb)'; // Blue
                                     break;
-                                case 'Epic': 
-                                    borderColor = '#c084fc'; nameBackgroundColor = 'rgba(192, 132, 252, 0.4)'; 
+                                case 'Epic':
+                                    borderColor = '#c084fc'; nameBackgroundColor = 'rgba(192, 132, 252, 0.4)';
                                     diceRollBackgroundColor = 'linear-gradient(145deg, #a78bfa, #8b5cf6)'; // Purple
                                     break;
-                                case 'Legendary': 
-                                    borderColor = '#facc15'; nameBackgroundColor = 'rgba(250, 204, 21, 0.4)'; 
+                                case 'Legendary':
+                                    borderColor = '#facc15'; nameBackgroundColor = 'rgba(250, 204, 21, 0.4)';
                                     diceRollBackgroundColor = 'linear-gradient(145deg, #f59e0b, #d97706)'; // Gold
                                     break;
                             }
@@ -990,11 +990,11 @@
                                 document.querySelectorAll('.card-instance').forEach(c => c.classList.remove('selected-card'));
                                 selectedCardElement = cardElement;
                                 cardElement.classList.add('selected-card');
-                                
+
                                 selectedCardNameDisplay.textContent = currentCardData.cardName;
                                 cardActionsContainer.classList.remove('hidden');
                             });
-                            
+
                             // Add listener for this card's regenerate lore button
                             const regenButton = cardElement.querySelector('.button-regenerate');
                             regenButton.addEventListener('click', (e) => {
@@ -1030,7 +1030,7 @@
                     showMessage(userFriendlyError, "error");
                     cardGrid.innerHTML = `<p class="text-center text-red-400 col-span-full">Image generation failed. Please check your API key and try again.</p>`;
                 }
-                
+
             } catch (error) {
                 console.error("Error generating card:", error);
                 showMessage(`Error: ${error.message}`, "error");
@@ -1118,7 +1118,7 @@
             document.querySelectorAll('.button-regenerate').forEach(btn => {
                 btn.innerHTML = '<div class="loader small-loader"></div>';
             });
-            
+
             const lorePrompt = `Create new lore for this card (max 120 characters):
             - Name: "${currentCardData.cardName}"
             - Dice Roll: ${currentCardData.diceRoll}
@@ -1126,13 +1126,13 @@
             - Stats: ATK ${currentCardStats.attack}, DEF ${currentCardStats.defense}, SPD ${currentCardStats.speed}
             - Ability Keyword: "${currentCardData.abilityKeyword}"
             - Triggered Ability: "${currentCardData.triggeredAbility}"
-            
+
             Return ONLY the lore text, nothing else.`;
-            
+
             try {
                 const newLore = await callBackendForText(lorePrompt);
-                currentCardData.cardLore = newLore.trim(); 
-                
+                currentCardData.cardLore = newLore.trim();
+
                 // Update lore on all visible cards
                 document.querySelectorAll('.card-lore-text').forEach(el => {
                     el.textContent = currentCardData.cardLore;
@@ -1168,57 +1168,57 @@
 
         // Expand lore functionality
         expandLoreButton.addEventListener('click', async () => {
-            if (!currentCardData) { 
-                showMessage("Please generate a card first.", "error"); 
-                return; 
+            if (!currentCardData) {
+                showMessage("Please generate a card first.", "error");
+                return;
             }
-            
-            expandLoreLoader.classList.remove('hidden'); 
-            expandedLoreDisplay.classList.add('hidden'); 
-            
+
+            expandLoreLoader.classList.remove('hidden');
+            expandedLoreDisplay.classList.add('hidden');
+
             const lorePrompt = `Expand this card lore into 2-3 detailed paragraphs:
             Card: "${currentCardData.cardName}"
             Current lore: "${currentCardData.cardLore}"
-            
+
             Provide rich backstory, abilities details, and world context. Return only the expanded text.`;
-            
+
             try {
                 const expandedText = await callBackendForText(lorePrompt);
-                
+
                 expandedLoreDisplay.innerHTML = '';
                 const saveButton = document.createElement('a');
                 saveButton.href = '#';
                 saveButton.id = 'saveLoreButton';
                 saveButton.className = 'button-save float-right';
                 saveButton.textContent = 'Save Lore';
-                
+
                 const textContent = document.createElement('div');
                 textContent.innerHTML = expandedText.replace(/
 /g, '<br>');
 
                 expandedLoreDisplay.appendChild(saveButton);
                 expandedLoreDisplay.appendChild(textContent);
-                expandedLoreDisplay.classList.remove('hidden'); 
-                
+                expandedLoreDisplay.classList.remove('hidden');
+
                 showMessage("Lore expanded!", "success");
             } catch (error) {
-                console.error("Error expanding lore:", error); 
+                console.error("Error expanding lore:", error);
                 showMessage(`Error: ${error.message}`, "error");
-            } finally { 
-                expandLoreLoader.classList.add('hidden'); 
+            } finally {
+                expandLoreLoader.classList.add('hidden');
             }
         });
 
         // Suggest synergies functionality
         suggestSynergiesButton.addEventListener('click', async () => {
-            if (!currentCardData) { 
-                showMessage("Please generate a card first.", "error"); 
-                return; 
+            if (!currentCardData) {
+                showMessage("Please generate a card first.", "error");
+                return;
             }
 
-            suggestSynergiesLoader.classList.remove('hidden'); 
-            synergiesDisplay.classList.add('hidden'); 
-            
+            suggestSynergiesLoader.classList.remove('hidden');
+            synergiesDisplay.classList.add('hidden');
+
             const synergyPrompt = `For this card, suggest 3 synergistic cards/items:
             Card: "${currentCardData.cardName}"
             Dice Roll: ${currentCardData.diceRoll}
@@ -1227,10 +1227,10 @@
             Stats: ATK ${currentCardStats.attack}, DEF ${currentCardStats.defense}, SPD ${currentCardStats.speed}
             Ability Keyword: "${currentCardData.abilityKeyword}"
             Triggered Ability: "${currentCardData.triggeredAbility}"
-            
+
             Return ONLY valid JSON:
             {"synergies": [{"conceptName": "Name", "conceptDescription": "Brief description", "synergyExplanation": "How they work together"}]}`;
-            
+
             try {
                 const synergyText = await callBackendForText(synergyPrompt);
                 const firstBrace = synergyText.indexOf('{');
@@ -1240,7 +1240,7 @@
                 }
                 const cleanedSynergyText = synergyText.substring(firstBrace, lastBrace + 1);
                 const synergyData = JSON.parse(cleanedSynergyText);
-                
+
                 synergiesDisplay.innerHTML = '';
                 const saveButton = document.createElement('a');
                 saveButton.href = '#';
@@ -1256,7 +1256,7 @@
                     synergiesDisplay.appendChild(title);
 
                     synergyData.synergies.forEach(syn => {
-                        const synEl = document.createElement('div'); 
+                        const synEl = document.createElement('div');
                         synEl.className = 'p-3 bg-gray-700/50 rounded-lg border border-purple-500/20';
                         synEl.dataset.synergyData = JSON.stringify(syn);
                         synEl.innerHTML = `
@@ -1271,17 +1271,17 @@
                         `;
                         synergiesDisplay.appendChild(synEl);
                     });
-                } else { 
-                    synergiesDisplay.innerHTML += '<p class="text-gray-400">No synergies suggested.</p>'; 
+                } else {
+                    synergiesDisplay.innerHTML += '<p class="text-gray-400">No synergies suggested.</p>';
                 }
-                
-                synergiesDisplay.classList.remove('hidden'); 
+
+                synergiesDisplay.classList.remove('hidden');
                 showMessage("Synergies suggested!", "success");
             } catch (error) {
-                console.error("Error suggesting synergies:", error); 
+                console.error("Error suggesting synergies:", error);
                 showMessage(`Error: ${error.message}`, "error");
-            } finally { 
-                suggestSynergiesLoader.classList.add('hidden'); 
+            } finally {
+                suggestSynergiesLoader.classList.add('hidden');
             }
         });
 
@@ -1319,9 +1319,9 @@
             URL.revokeObjectURL(url);
             showMessage(`${filename} saved!`, 'success');
         }
-        
+
         // Download all cards as a zip file
-        downloadAllZipButton.addEventListener('click', async () => {
+        downloadAllZipButton.addEventListener('click', async ().
             if (!currentCardData) {
                 showMessage("Please generate cards first.", "error");
                 return;
@@ -1333,7 +1333,7 @@
             const options = { allowTaint: true, useCORS: true, scale: 2, backgroundColor: 'transparent' };
 
             const promises = cardElements.map(async (el, i) => {
-                el.classList.add('exporting-card'); 
+                el.classList.add('exporting-card');
                 try {
                     const canvas = await html2canvas(el, options);
                     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
@@ -1343,7 +1343,7 @@
                     console.error(`Error rendering card ${i + 1} for zip:`, err);
                     showMessage(`Error rendering card ${i + 1}.`, "error");
                 } finally {
-                    el.classList.remove('exporting-card'); 
+                    el.classList.remove('exporting-card');
                 }
             });
 
@@ -1368,36 +1368,36 @@
 
         // Export card as PNG
         exportPngButton.addEventListener('click', () => {
-            if (!selectedCardElement || !currentCardData) { 
-                showMessage("Please generate and select a card first.", "error"); 
-                return; 
+            if (!selectedCardElement || !currentCardData) {
+                showMessage("Please generate and select a card first.", "error");
+                return;
             }
-            
+
             showMessage("Preparing PNG export...", "success");
-            
+
             selectedCardElement.classList.add('exporting-card');
 
-            const options = { 
-                allowTaint: true, 
-                useCORS: true, 
-                scale: 2, 
-                backgroundColor: 'transparent', 
-                logging: false 
+            const options = {
+                allowTaint: true,
+                useCORS: true,
+                scale: 2, .
+                backgroundColor: 'transparent',
+                logging: false
             };
-            
+
             setTimeout(() => {
                 html2canvas(selectedCardElement, options).then(canvas => {
                     const imageURI = canvas.toDataURL('image/png');
                     const link = document.createElement('a');
                     const filename = (currentCardData?.cardName?.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() || 'ai_card') + '.png';
-                    link.download = filename; 
+                    link.download = filename;
                     link.href = imageURI;
-                    document.body.appendChild(link); 
-                    link.click(); 
+                    document.body.appendChild(link);
+                    link.click();
                     document.body.removeChild(link);
                     showMessage("Card exported as PNG!", "success");
                 }).catch(err => {
-                    console.error("Error exporting card:", err); 
+                    console.error("Error exporting card:", err);
                     showMessage("Export error: " + err.message, "error");
                 }).finally(() => {
                     selectedCardElement.classList.remove('exporting-card');
@@ -1413,7 +1413,7 @@
 
         function closeImageModal() {
             imageModal.classList.remove('visible');
-            setTimeout(() => { modalImage.src = ''; }, 300); 
+            setTimeout(() => { modalImage.src = ''; }, 300);
         }
 
         closeModalButton.addEventListener('click', closeImageModal);
@@ -1428,17 +1428,17 @@
             const messageDiv = document.createElement('div');
             messageDiv.className = `message-box ${type === 'error' ? 'message-box-error' : 'message-box-success'}`;
             messageDiv.textContent = message;
-            messageArea.innerHTML = ''; 
+            messageArea.innerHTML = '';
             messageArea.appendChild(messageDiv);
-            setTimeout(() => { 
-                if (messageDiv.parentNode === messageArea) { 
-                    messageArea.removeChild(messageDiv); 
-                } 
+            setTimeout(() => {
+                if (messageDiv.parentNode === messageArea) {
+                    messageArea.removeChild(messageDiv);
+                }
             }, 5000);
         }
-        
-        function clearMessages() { 
-            messageArea.innerHTML = ''; 
+
+        function clearMessages() {
+            messageArea.innerHTML = '';
         }
 
         // --- History Functions ---
@@ -1459,7 +1459,7 @@
             );
 
             const historyEntry = {
-                cardData: JSON.parse(JSON.stringify(cardData)), 
+                cardData: JSON.parse(JSON.stringify(cardData)),
                 imageUrls: persistentImageUrls
             };
 
@@ -1468,19 +1468,19 @@
             while (generationHistory.length > 0) {
                 try {
                     localStorage.setItem('cardGenerationHistory', JSON.stringify(generationHistory));
-                    break; 
+                    break;
                 } catch (e) {
                     if ((e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
                         console.warn('LocalStorage quota exceeded. Removing oldest history item.');
                         if (generationHistory.length <= 1) {
                             console.error("The latest card generation is too large to save to history, even by itself. It will not be saved.");
-                            generationHistory.shift(); 
-                            break; 
+                            generationHistory.shift();
+                            break;
                         }
-                        generationHistory.pop(); 
+                        generationHistory.pop();
                     } else {
                         console.error('Failed to save history:', e);
-                        break; 
+                        break;
                     }
                 }
             }
@@ -1515,7 +1515,7 @@
             currentCardData = entry.cardData;
             currentCardStats = currentCardData.stats;
             selectedCardElement = null;
-            
+
             cardGrid.innerHTML = '';
             cardDisplayAndActionsArea.classList.remove('hidden');
             cardActionsContainer.classList.add('hidden');
@@ -1526,7 +1526,7 @@
                 cardElement.innerHTML = createCardHTML(currentCardData, url);
                 cardGrid.appendChild(cardElement);
             });
-            
+
             closeHistoryModal();
             showMessage(`Loaded "${currentCardData.cardName}" from history.`, 'success');
         }
