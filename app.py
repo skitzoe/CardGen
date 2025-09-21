@@ -1,10 +1,14 @@
 import os
 import requests
+import logging
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # We specify the 'public' directory as the static folder and serve it at the root
 app = Flask(__name__, static_folder='public', static_url_path='')
@@ -83,12 +87,57 @@ The card name must be in title case."""
         return jsonify(response.json())
 
     except requests.exceptions.RequestException as e:
-        # It's good practice to log the error
-        print(f"Error calling OpenRouter API: {e}")
+        logging.error(f"Error calling OpenRouter API: {e}")
         return jsonify({'error': f'Failed to communicate with OpenRouter API: {e}'}), 502
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+        logging.error(f"An unexpected error occurred: {e}")
         return jsonify({'error': 'An unexpected error occurred on the server.'}), 500
+
+@app.route('/api/generate-text', methods=['POST'])
+def generate_text():
+    try:
+        data = request.get_json()
+        prompt = data.get('prompt')
+
+        if not prompt:
+            return jsonify({'error': 'Missing prompt'}), 400
+
+        open_router_api_key = os.environ.get('OPENROUTER_API_KEY')
+        if not open_router_api_key:
+            return jsonify({'error': 'OPENROUTER_API_KEY not set on the server'}), 500
+
+        headers = {
+            "Authorization": f"Bearer {open_router_api_key}",
+            "Content-Type": "application/json",
+        }
+
+        referer = os.environ.get('OPENROUTER_REFERER')
+        if referer:
+            headers["HTTP-Referer"] = referer
+
+        title = os.environ.get('OPENROUTER_TITLE')
+        if title:
+            headers["X-Title"] = title
+
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers=headers,
+            json={
+                "model": "deepseek/deepseek-chat-v3.1:free",
+                "messages": [{"role": "user", "content": prompt}]
+                # No response_format needed for plain text
+            }
+        )
+
+        response.raise_for_status()
+        return jsonify(response.json())
+
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error calling OpenRouter for text generation: {e}")
+        return jsonify({'error': f'Failed to communicate with OpenRouter API: {e}'}), 502
+    except Exception as e:
+        logging.error(f"An unexpected error occurred in text generation: {e}")
+        return jsonify({'error': 'An unexpected server error occurred during text generation.'}), 500
 
 @app.route('/api/generate-image', methods=['POST'])
 def generate_image():
@@ -118,66 +167,44 @@ def generate_image():
             response.raise_for_status()
             return jsonify(response.json())
 
-        elif model.startswith('stabilityai/') or model.startswith('custom_backend'): # Assuming openrouter for stabilityai models
-            # Handle OpenRouter and Custom Backend
-            if model == 'custom_backend':
-                # Custom backend logic
-                custom_backend_url = data.get('customBackendUrl')
-                if not custom_backend_url:
-                    return jsonify({'error': 'Custom backend URL not provided'}), 400
+        elif model.startswith('stabilityai/'): # Assuming openrouter for stabilityai models
+            api_key = os.environ.get('OPENROUTER_API_KEY')
+            if not api_key:
+                return jsonify({'error': 'OPENROUTER_API_KEY not set on the server'}), 500
 
-                response = requests.post(
-                    custom_backend_url,
-                    json={'prompt': prompt},
-                    headers={'Content-Type': 'application/json'}
-                )
-                # Custom backends might return image data directly
-                # For simplicity, we assume it returns a JSON with a URL like the others
-                # A more robust solution might handle raw image data
-                response.raise_for_status()
-                # Assuming the custom backend returns a blob, we can't easily proxy that
-                # without more complex handling. A simple URL proxy is more feasible.
-                # Let's assume for now the custom backend returns a JSON with an `output_url`.
-                return jsonify(response.json())
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            }
 
-            else: # OpenRouter
-                api_key = os.environ.get('OPENROUTER_API_KEY')
-                if not api_key:
-                    return jsonify({'error': 'OPENROUTER_API_KEY not set on the server'}), 500
+            referer = os.environ.get('OPENROUTER_REFERER')
+            if referer:
+                headers["HTTP-Referer"] = referer
 
-                headers = {
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json",
+            title = os.environ.get('OPENROUTER_TITLE')
+            if title:
+                headers["X-Title"] = title
+
+            response = requests.post(
+                "https://openrouter.ai/api/v1/images/generations",
+                headers=headers,
+                json={
+                    "model": model,
+                    "prompt": prompt,
+                    "n": 1,
+                    "size": "1024x1024"
                 }
-
-                referer = os.environ.get('OPENROUTER_REFERER')
-                if referer:
-                    headers["HTTP-Referer"] = referer
-
-                title = os.environ.get('OPENROUTER_TITLE')
-                if title:
-                    headers["X-Title"] = title
-
-                response = requests.post(
-                    "https://openrouter.ai/api/v1/images/generations",
-                    headers=headers,
-                    json={
-                        "model": model,
-                        "prompt": prompt,
-                        "n": 1,
-                        "size": "1024x1024"
-                    }
-                )
-                response.raise_for_status()
-                return jsonify(response.json())
+            )
+            response.raise_for_status()
+            return jsonify(response.json())
         else:
             return jsonify({'error': f'Unsupported image model: {model}'}), 400
 
     except requests.exceptions.RequestException as e:
-        print(f"Error calling Image Generation API: {e}")
+        logging.error(f"Error calling Image Generation API: {e}")
         return jsonify({'error': f'Failed to communicate with Image API: {e}'}), 502
     except Exception as e:
-        print(f"An unexpected error occurred in image generation: {e}")
+        logging.error(f"An unexpected error occurred in image generation: {e}")
         return jsonify({'error': 'An unexpected server error occurred during image generation.'}), 500
 
 # Flask will automatically handle serving other files from the static folder.

@@ -580,6 +580,16 @@
                 </select>
             </div>
 
+            <div>
+                <label for="imageModelSelect" class="block text-sm font-medium text-purple-300 mb-2">Image Generation Model:</label>
+                <select id="imageModelSelect" class="w-full p-3 rounded-lg input-field">
+                    <option value="stabilityai/stable-diffusion-3" selected>Stable Diffusion 3 (Recommended)</option>
+                    <option value="deepai-fantasy-world">DeepAI Fantasy World</option>
+                    <option value="deepai-stable-diffusion">DeepAI Stable Diffusion</option>
+                    <option value="stabilityai/sdxl">Stable Diffusion XL</option>
+                </select>
+            </div>
+
             <!-- Conditional Sub-Type Options -->
             <div id="subTypeContainer" class="space-y-4 mt-4">
                 <div id="humanOptions" class="hidden">
@@ -697,9 +707,6 @@
         const cardDescriptionInput = document.getElementById('cardDescription');
         const descriptionCounter = document.getElementById('descriptionCounter');
         const artStyleSelect = document.getElementById('artStyleSelect');
-        const imageModelSelect = document.getElementById('imageModelSelect');
-        const customBackendUrlContainer = document.getElementById('customBackendUrlContainer');
-        const customBackendUrlInput = document.getElementById('customBackendUrlInput');
 
         // Sub-type elements
         const humanOptions = document.getElementById('humanOptions');
@@ -749,22 +756,6 @@
 
         const originalDescriptionPlaceholder = cardDescriptionInput.placeholder;
 
-        // Show/hide Custom Backend URL input based on model selection
-        imageModelSelect.addEventListener('change', () => {
-            if (imageModelSelect.value === 'custom_backend') {
-                customBackendUrlContainer.classList.remove('hidden');
-            } else {
-                customBackendUrlContainer.classList.add('hidden');
-            }
-        });
-
-        // Save/load Custom Backend URL from local storage
-        customBackendUrlInput.addEventListener('change', () => {
-            localStorage.setItem('custom_backend_url', customBackendUrlInput.value.trim());
-        });
-        if (localStorage.getItem('custom_backend_url')) {
-            customBackendUrlInput.value = localStorage.getItem('custom_backend_url');
-        }
         function hideAllSubtypeOptions() {
             humanOptions.classList.add('hidden');
             alienOptions.classList.add('hidden');
@@ -867,12 +858,6 @@
                 return;
             }
 
-            const customBackendUrl = customBackendUrlInput.value.trim();
-            if (imageModelSelect.value === 'custom_backend' && !customBackendUrl) {
-                showMessage("Please enter the URL for your custom backend.", "error");
-                return;
-            }
-
             clearMessages();
             loadingIndicator.classList.remove('hidden');
             cardDisplayAndActionsArea.classList.add('hidden');
@@ -926,7 +911,7 @@
                     }
 
                     const imagePrompt = `${styleModifier}, ${baseImagePrompt}`;
-                    const imageModel = imageModelSelect.value;
+                    const imageModel = 'stabilityai/stable-diffusion-3';
 
                     let imageUrls = [];
                     const imagePromises = [];
@@ -934,7 +919,6 @@
                         const imagePayload = {
                             model: imageModel,
                             prompt: imagePrompt,
-                            customBackendUrl: customBackendUrl // Pass this along
                         };
                         imagePromises.push(callBackendAPI('/api/generate-image', imagePayload));
                     }
