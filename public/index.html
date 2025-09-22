@@ -1306,7 +1306,7 @@
         }
 
         // Download all cards as a zip file
-        downloadAllZipButton.addEventListener('click', async ().
+        downloadAllZipButton.addEventListener('click', async () => {
             if (!currentCardData) {
                 showMessage("Please generate cards first.", "error");
                 return;
@@ -1365,7 +1365,7 @@
             const options = {
                 allowTaint: true,
                 useCORS: true,
-                scale: 2, .
+                scale: 2,
                 backgroundColor: 'transparent',
                 logging: false
             };
