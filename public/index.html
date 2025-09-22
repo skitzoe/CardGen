@@ -707,6 +707,7 @@
         const cardDescriptionInput = document.getElementById('cardDescription');
         const descriptionCounter = document.getElementById('descriptionCounter');
         const artStyleSelect = document.getElementById('artStyleSelect');
+        const imageModelSelect = document.getElementById('imageModelSelect');
 
         // Sub-type elements
         const humanOptions = document.getElementById('humanOptions');
@@ -911,7 +912,7 @@
                     }
 
                     const imagePrompt = `${styleModifier}, ${baseImagePrompt}`;
-                    const imageModel = 'stabilityai/stable-diffusion-3';
+                    const imageModel = imageModelSelect.value;
 
                     let imageUrls = [];
                     const imagePromises = [];

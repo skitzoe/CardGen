@@ -167,7 +167,7 @@ def generate_image():
             response.raise_for_status()
             return jsonify(response.json())
 
-        elif model.startswith('stabilityai/'): # Assuming openrouter for stabilityai models
+        elif model.startswith('stabilityai/'):
             api_key = os.environ.get('OPENROUTER_API_KEY')
             if not api_key:
                 return jsonify({'error': 'OPENROUTER_API_KEY not set on the server'}), 500
