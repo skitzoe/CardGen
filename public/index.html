@@ -1033,8 +1033,14 @@
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || `API error: ${response.status}`);
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `API error: ${response.status}`);
+                } else {
+                    const errorText = await response.text();
+                    throw new Error(`Server returned a non-JSON error: ${response.status} - ${errorText}`);
+                }
             }
 
             return await response.json();
