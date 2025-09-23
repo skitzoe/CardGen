@@ -1214,8 +1214,7 @@
                 saveButton.textContent = 'Save Lore';
 
                 const textContent = document.createElement('div');
-                textContent.innerHTML = expandedText.replace(/
-/g, '<br>');
+                textContent.innerHTML = expandedText.replace(/\n/g, '<br>');
 
                 expandedLoreDisplay.appendChild(saveButton);
                 expandedLoreDisplay.appendChild(textContent);

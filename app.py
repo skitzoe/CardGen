@@ -180,6 +180,8 @@ def generate_image():
 
             # Transform the response to the format the frontend expects
             openrouter_data = response.json()
+            # According to OpenRouter docs (https://openrouter.ai/docs/features/multimodal/image-generation)
+            # the image URL is in this path.
             image_url = openrouter_data.get("choices", [{}])[0].get("message", {}).get("images", [{}])[0].get("image_url", {}).get("url")
 
             if not image_url:
