@@ -186,17 +186,30 @@ def generate_image():
                 headers["X-Title"] = title
 
             response = requests.post(
-                "https://openrouter.ai/api/v1/images/generations",
+                "https://openrouter.ai/api/v1/chat/completions",
                 headers=headers,
                 json={
                     "model": model,
-                    "prompt": prompt,
-                    "n": 1,
-                    "size": "1024x1024"
+                    "messages": [{"role": "user", "content": prompt}],
+                    "modalities": ["image", "text"]
                 }
             )
             response.raise_for_status()
-            return jsonify(response.json())
+
+            # Transform the response to the format the frontend expects
+            openrouter_data = response.json()
+            image_url = openrouter_data.get("choices", [{}])[0].get("message", {}).get("images", [{}])[0].get("image_url", {}).get("url")
+
+            if not image_url:
+                raise Exception("Image URL not found in OpenRouter response")
+
+            # The frontend expects a 'data' key for OpenRouter responses
+            transformed_response = {
+                "data": [{
+                    "url": image_url
+                }]
+            }
+            return jsonify(transformed_response)
         else:
             return jsonify({'error': f'Unsupported image model: {model}'}), 400
 
