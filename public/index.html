@@ -550,7 +550,7 @@
     <div class="w-full max-w-4xl p-6 sm:p-8 glass-card rounded-2xl shadow-2xl space-y-8">
         <header class="text-center">
             <h1 class="text-4xl sm:text-5xl font-bold text-white mb-2">AI Card Generator</h1>
-            <p class="text-purple-300 text-lg">Powered by OpenRouter & DeepAI - Design unique cards with AI</p>
+            <p class="text-purple-300 text-lg">Powered by OpenRouter - Design unique cards with AI</p>
         </header>
         <div class="space-y-6">
             <div>
@@ -581,12 +581,10 @@
             </div>
 
             <div>
-                <label for="imageModelSelect" class="block text-sm font-medium text-purple-300 mb-2">Image Generation Model:</label>
+                <label for="imageModelSelect" class="block text-sm font-medium text-purple-300 mb-2">Image Model:</label>
                 <select id="imageModelSelect" class="w-full p-3 rounded-lg input-field">
                     <option value="stabilityai/stable-diffusion-3" selected>Stable Diffusion 3 (Recommended)</option>
-                    <option value="deepai-fantasy-world">DeepAI Fantasy World</option>
-                    <option value="deepai-stable-diffusion">DeepAI Stable Diffusion</option>
-                    <option value="stabilityai/sdxl">Stable Diffusion XL</option>
+                    <option value="stabilityai/stable-diffusion-xl">Stable Diffusion XL</option>
                 </select>
             </div>
 
@@ -700,8 +698,12 @@
     </div>
 
     <script>
-        // Config
-        const API_ORIGIN = ''; // e.g., 'http://localhost:3000'
+        // --- Configuration ---
+        // For production, you might want to set this to your backend's URL.
+        // For example: const API_ORIGIN = 'https://api.my-card-app.com';
+        // An empty string defaults to the same origin, which is fine for local development
+        // or if the frontend and backend are served from the same domain.
+        const API_ORIGIN = '';
 
         // DOM Elements
         const generateCardButton = document.getElementById('generateCardButton');
@@ -711,6 +713,8 @@
         const descriptionCounter = document.getElementById('descriptionCounter');
         const artStyleSelect = document.getElementById('artStyleSelect');
         const imageModelSelect = document.getElementById('imageModelSelect');
+        const customBackendUrlContainer = document.getElementById('customBackendUrlContainer');
+        const customBackendUrlInput = document.getElementById('customBackendUrlInput');
 
         // Sub-type elements
         const humanOptions = document.getElementById('humanOptions');
@@ -760,6 +764,22 @@
 
         const originalDescriptionPlaceholder = cardDescriptionInput.placeholder;
 
+        // Show/hide Custom Backend URL input based on model selection
+        imageModelSelect.addEventListener('change', () => {
+            if (imageModelSelect.value === 'custom_backend') {
+                customBackendUrlContainer.classList.remove('hidden');
+            } else {
+                customBackendUrlContainer.classList.add('hidden');
+            }
+        });
+
+        // Save/load Custom Backend URL from local storage
+        customBackendUrlInput.addEventListener('change', () => {
+            localStorage.setItem('custom_backend_url', customBackendUrlInput.value.trim());
+        });
+        if (localStorage.getItem('custom_backend_url')) {
+            customBackendUrlInput.value = localStorage.getItem('custom_backend_url');
+        }
         function hideAllSubtypeOptions() {
             humanOptions.classList.add('hidden');
             alienOptions.classList.add('hidden');
@@ -862,6 +882,12 @@
                 return;
             }
 
+            const customBackendUrl = customBackendUrlInput.value.trim();
+            if (imageModelSelect.value === 'custom_backend' && !customBackendUrl) {
+                showMessage("Please enter the URL for your custom backend.", "error");
+                return;
+            }
+
             clearMessages();
             loadingIndicator.classList.remove('hidden');
             cardDisplayAndActionsArea.classList.add('hidden');
@@ -884,7 +910,8 @@
 
                 const textResponse = await callBackendAPI('/api/generate-concept', conceptPayload);
                 let cardDataText = textResponse.choices[0].message.content;
-                const cleanedCardDataText = cardDataText.replace(/```json\n?|```/g, '').trim();
+                const cleanedCardDataText = cardDataText.replace(/```json
+?|```/g, '').trim();
 
                 currentCardData = JSON.parse(cleanedCardDataText);
                 currentCardData.rarity = cardRarity;
@@ -922,6 +949,7 @@
                         const imagePayload = {
                             model: imageModel,
                             prompt: imagePrompt,
+                            customBackendUrl: customBackendUrl // Pass this along
                         };
                         imagePromises.push(callBackendAPI('/api/generate-image', imagePayload));
                     }
@@ -1029,23 +1057,24 @@
 
         // Generic Backend API call function
         async function callBackendAPI(endpoint, payload) {
-            const response = await fetch(API_ORIGIN + endpoint, {
+            const url = `${API_ORIGIN}${endpoint}`;
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
 
             if (!response.ok) {
-                const contentType = response.headers.get("content-type");
-                if (contentType && contentType.indexOf("application/json") !== -1) {
-                    const errorData = await response.json();
+                const errorText = await response.text();
+                try {
+                    // Try to parse as JSON to get a specific error message
+                    const errorData = JSON.parse(errorText);
                     throw new Error(errorData.error || `API error: ${response.status}`);
-                } else {
-                    const errorText = await response.text();
-                    throw new Error(`Server returned a non-JSON error: ${response.status} - ${errorText}`);
+                } catch (e) {
+                    // If not JSON, throw the raw text as the error
+                    throw new Error(errorText || `API error: ${response.status}`);
                 }
             }
-
             return await response.json();
         }
 
@@ -1186,7 +1215,8 @@
                 saveButton.textContent = 'Save Lore';
 
                 const textContent = document.createElement('div');
-                textContent.innerHTML = expandedText.replace(/\n/g, '<br>');
+                textContent.innerHTML = expandedText.replace(/
+/g, '<br>');
 
                 expandedLoreDisplay.appendChild(saveButton);
                 expandedLoreDisplay.appendChild(textContent);

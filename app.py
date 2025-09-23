@@ -149,25 +149,7 @@ def generate_image():
         if not model or not prompt:
             return jsonify({'error': 'Missing model or prompt'}), 400
 
-        if model.startswith('deepai-'):
-            api_key = os.environ.get('DEEPAI_API_KEY')
-            if not api_key:
-                return jsonify({'error': 'DEEPAI_API_KEY not set on the server'}), 500
-
-            deepai_model_name = model.replace('deepai-', '')
-            api_url = f'https://api.deepai.org/api/{deepai_model_name}'
-            if deepai_model_name in ['stable-diffusion', 'fantasy-world']:
-                 api_url = 'https://api.deepai.org/api/text2img'
-
-            response = requests.post(
-                api_url,
-                data={'text': prompt},
-                headers={'api-key': api_key}
-            )
-            response.raise_for_status()
-            return jsonify(response.json())
-
-        elif model.startswith('stabilityai/'):
+        if model.startswith('stabilityai/'):
             api_key = os.environ.get('OPENROUTER_API_KEY')
             if not api_key:
                 return jsonify({'error': 'OPENROUTER_API_KEY not set on the server'}), 500

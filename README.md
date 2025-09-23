@@ -1,12 +1,12 @@
 # AI Card Generator
 
-This web application allows you to generate unique trading card concepts and images using AI. Powered by Flask, OpenRouter, and DeepAI, you can design cards with custom names, types, descriptions, and abilities, and then bring them to life with AI-generated art.
+This web application allows you to generate unique trading card concepts and images using AI. Powered by Flask and OpenRouter, you can design cards with custom names, types, descriptions, and abilities, and then bring them to life with AI-generated art.
 
 ## Features
 
 -   Generate detailed card concepts, including lore, stats, and abilities.
 -   Generate four unique artistic variations for each card concept.
--   Choose from multiple image generation models (e.g., Stable Diffusion 3, DeepAI Fantasy World).
+-   Choose from multiple image generation models from OpenRouter (e.g., Stable Diffusion 3, SDXL).
 -   Expand card lore and get synergy suggestions for your creations.
 -   Export individual cards as high-quality PNGs or download a full set as a ZIP file.
 -   Save and view your generation history directly in the browser.
@@ -51,9 +51,6 @@ The application requires API keys for the AI services it uses to generate conten
     ```
     # Get your key from https://openrouter.ai/keys
     OPENROUTER_API_KEY="sk-or-..."
-
-    # Get your key from https://deepai.org/
-    DEEPAI_API_KEY="your-deepai-api-key"
 
     # Optional: For OpenRouter integration, you can set your site URL and app title.
     # This helps identify your app on the OpenRouter dashboard.
