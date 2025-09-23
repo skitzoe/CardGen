@@ -910,8 +910,7 @@
 
                 const textResponse = await callBackendAPI('/api/generate-concept', conceptPayload);
                 let cardDataText = textResponse.choices[0].message.content;
-                const cleanedCardDataText = cardDataText.replace(/```json
-?|```/g, '').trim();
+                const cleanedCardDataText = cardDataText.replace(/```json\s*|```/g, '').trim();
 
                 currentCardData = JSON.parse(cleanedCardDataText);
                 currentCardData.rarity = cardRarity;
