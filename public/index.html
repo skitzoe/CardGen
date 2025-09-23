@@ -713,8 +713,6 @@
         const descriptionCounter = document.getElementById('descriptionCounter');
         const artStyleSelect = document.getElementById('artStyleSelect');
         const imageModelSelect = document.getElementById('imageModelSelect');
-        const customBackendUrlContainer = document.getElementById('customBackendUrlContainer');
-        const customBackendUrlInput = document.getElementById('customBackendUrlInput');
 
         // Sub-type elements
         const humanOptions = document.getElementById('humanOptions');
@@ -763,23 +761,6 @@
         let generationHistory = [];
 
         const originalDescriptionPlaceholder = cardDescriptionInput.placeholder;
-
-        // Show/hide Custom Backend URL input based on model selection
-        imageModelSelect.addEventListener('change', () => {
-            if (imageModelSelect.value === 'custom_backend') {
-                customBackendUrlContainer.classList.remove('hidden');
-            } else {
-                customBackendUrlContainer.classList.add('hidden');
-            }
-        });
-
-        // Save/load Custom Backend URL from local storage
-        customBackendUrlInput.addEventListener('change', () => {
-            localStorage.setItem('custom_backend_url', customBackendUrlInput.value.trim());
-        });
-        if (localStorage.getItem('custom_backend_url')) {
-            customBackendUrlInput.value = localStorage.getItem('custom_backend_url');
-        }
         function hideAllSubtypeOptions() {
             humanOptions.classList.add('hidden');
             alienOptions.classList.add('hidden');
@@ -882,12 +863,6 @@
                 return;
             }
 
-            const customBackendUrl = customBackendUrlInput.value.trim();
-            if (imageModelSelect.value === 'custom_backend' && !customBackendUrl) {
-                showMessage("Please enter the URL for your custom backend.", "error");
-                return;
-            }
-
             clearMessages();
             loadingIndicator.classList.remove('hidden');
             cardDisplayAndActionsArea.classList.add('hidden');
@@ -947,8 +922,7 @@
                     for (let i = 0; i < 4; i++) {
                         const imagePayload = {
                             model: imageModel,
-                            prompt: imagePrompt,
-                            customBackendUrl: customBackendUrl // Pass this along
+                            prompt: imagePrompt
                         };
                         imagePromises.push(callBackendAPI('/api/generate-image', imagePayload));
                     }
