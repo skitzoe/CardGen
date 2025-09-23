@@ -81,3 +81,25 @@ For development purposes, you can run the application directly using Flask's bui
 python app.py
 ```
 The application will be available at `http://localhost:3000`. The port can be changed by setting the `PORT` environment variable in your `.env` file.
+
+## Deployment Notes
+
+### Frontend and Backend on Different Domains
+
+If you plan to host the frontend (the `index.html` file) on a different domain from the backend Flask server, you will need to configure the `API_ORIGIN` variable in `public/index.html`.
+
+Open `public/index.html` and find this line at the top of the `<script>` tag:
+```javascript
+const API_ORIGIN = ''; // e.g., 'http://localhost:3000'
+```
+Change the empty string to the full URL of your backend server. For example:
+```javascript
+const API_ORIGIN = 'https://api.your-domain.com';
+```
+This will ensure that the frontend can correctly communicate with the backend API.
+
+### Tailwind CSS in Production
+
+This application uses the Tailwind CSS CDN for simplicity. For a production environment, it is recommended to install Tailwind CSS as a PostCSS plugin or use the Tailwind CLI to build your CSS. This will result in a smaller, more optimized CSS file.
+
+For more information, see the [official Tailwind CSS documentation](https://tailwindcss.com/docs/installation).

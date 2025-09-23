@@ -700,6 +700,9 @@
     </div>
 
     <script>
+        // Config
+        const API_ORIGIN = ''; // e.g., 'http://localhost:3000'
+
         // DOM Elements
         const generateCardButton = document.getElementById('generateCardButton');
         const cardNameInput = document.getElementById('cardNameInput');
@@ -1026,7 +1029,7 @@
 
         // Generic Backend API call function
         async function callBackendAPI(endpoint, payload) {
-            const response = await fetch(endpoint, {
+            const response = await fetch(API_ORIGIN + endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
