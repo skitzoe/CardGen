@@ -1,11 +1,24 @@
 import os
-import requests
 import logging
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
+from openai import OpenAI, APIError
 
 # Load environment variables from .env file
 load_dotenv()
+
+# --- OpenAI Client Initialization ---
+# Point the client to the OpenRouter API
+open_router_api_key = os.environ.get('OPENROUTER_API_KEY')
+if not open_router_api_key:
+    # This is a fatal error for the server, so we log it and exit if the key is not set.
+    logging.critical("CRITICAL: OPENROUTER_API_KEY environment variable not set.")
+    exit("OPENROUTER_API_KEY is not set. The application cannot start.")
+
+client = OpenAI(
+    base_url="https://openrouter.ai/api/v1",
+    api_key=open_router_api_key,
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -29,10 +42,6 @@ def generate_concept():
         sub_type_detail = data.get('subTypeDetail', '')
         description = data.get('description', '')
         rarity = data.get('rarity', 'Common')
-
-        open_router_api_key = os.environ.get('OPENROUTER_API_KEY')
-        if not open_router_api_key:
-            return jsonify({'error': 'OPENROUTER_API_KEY not set on the server'}), 500
 
         card_concept_prompt = f"""You are a card game designer. Create a detailed card based on:
 - Card Name: "{user_card_name or "Auto-generate"}"
@@ -60,38 +69,21 @@ Return ONLY a JSON object with these exact fields:
 
 The card name must be in title case."""
 
-        headers = {
-            "Authorization": f"Bearer {open_router_api_key}",
-            "Content-Type": "application/json",
-        }
-
-        referer = os.environ.get('OPENROUTER_REFERER')
-        if referer:
-            headers["HTTP-Referer"] = referer
-
-        title = os.environ.get('OPENROUTER_TITLE')
-        if title:
-            headers["X-Title"] = title
-
-        response = requests.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers=headers,
-            json={
-                "model": "deepseek/deepseek-chat-v3.1:free",
-                "messages": [{"role": "user", "content": card_concept_prompt}],
-                "response_format": {"type": "json_object"}
-            }
+        chat_completion = client.chat.completions.create(
+            model="deepseek/deepseek-chat-v3.1:free",
+            messages=[{"role": "user", "content": card_concept_prompt}],
+            response_format={"type": "json_object"}
         )
 
-        response.raise_for_status()
-        return jsonify(response.json())
+        # The openai library returns a pydantic model, we need to convert it to a dict to jsonify
+        return jsonify(chat_completion.model_dump())
 
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Error calling OpenRouter API: {e}")
-        return jsonify({'error': f'Failed to communicate with OpenRouter API: {e}'}), 502
+    except APIError as e:
+        logging.error(f"OpenRouter API Error: {e.status_code} - {e.response}")
+        return jsonify({'error': f'Failed to communicate with OpenRouter API: {e.message}'}), e.status_code or 502
     except Exception as e:
-        logging.error(f"An unexpected error occurred: {e}")
-        return jsonify({'error': 'An unexpected error occurred on the server.'}), 500
+        logging.error(f"An unexpected error occurred in concept generation: {e}")
+        return jsonify({'error': 'An unexpected server error occurred during concept generation.'}), 500
 
 @app.route('/api/generate-text', methods=['POST'])
 def generate_text():
@@ -102,39 +94,16 @@ def generate_text():
         if not prompt:
             return jsonify({'error': 'Missing prompt'}), 400
 
-        open_router_api_key = os.environ.get('OPENROUTER_API_KEY')
-        if not open_router_api_key:
-            return jsonify({'error': 'OPENROUTER_API_KEY not set on the server'}), 500
-
-        headers = {
-            "Authorization": f"Bearer {open_router_api_key}",
-            "Content-Type": "application/json",
-        }
-
-        referer = os.environ.get('OPENROUTER_REFERER')
-        if referer:
-            headers["HTTP-Referer"] = referer
-
-        title = os.environ.get('OPENROUTER_TITLE')
-        if title:
-            headers["X-Title"] = title
-
-        response = requests.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers=headers,
-            json={
-                "model": "deepseek/deepseek-chat-v3.1:free",
-                "messages": [{"role": "user", "content": prompt}]
-                # No response_format needed for plain text
-            }
+        chat_completion = client.chat.completions.create(
+            model="deepseek/deepseek-chat-v3.1:free",
+            messages=[{"role": "user", "content": prompt}]
         )
 
-        response.raise_for_status()
-        return jsonify(response.json())
+        return jsonify(chat_completion.model_dump())
 
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Error calling OpenRouter for text generation: {e}")
-        return jsonify({'error': f'Failed to communicate with OpenRouter API: {e}'}), 502
+    except APIError as e:
+        logging.error(f"OpenRouter API Error for text generation: {e.status_code} - {e.response}")
+        return jsonify({'error': f'Failed to communicate with OpenRouter API: {e.message}'}), e.status_code or 502
     except Exception as e:
         logging.error(f"An unexpected error occurred in text generation: {e}")
         return jsonify({'error': 'An unexpected server error occurred during text generation.'}), 500
@@ -149,63 +118,30 @@ def generate_image():
         if not model or not prompt:
             return jsonify({'error': 'Missing model or prompt'}), 400
 
-        if model.startswith('stabilityai/'):
-            api_key = os.environ.get('OPENROUTER_API_KEY')
-            if not api_key:
-                return jsonify({'error': 'OPENROUTER_API_KEY not set on the server'}), 500
+        # The OpenAI library is the standard way to interact with OpenAI-compatible APIs like OpenRouter.
+        # It handles the request formatting for us.
+        image_response = client.images.generate(
+            model=model,
+            prompt=prompt,
+            n=1,
+            size="1024x1024" # Using a fixed size for simplicity, as the card layout is square.
+        )
 
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            }
+        image_url = image_response.data[0].url
+        if not image_url:
+            raise Exception("Image URL not found in OpenRouter response")
 
-            referer = os.environ.get('OPENROUTER_REFERER')
-            if referer:
-                headers["HTTP-Referer"] = referer
+        # The frontend expects a 'data' key with a list containing an object with a 'url' key.
+        # The client.images.generate response is already in this format.
+        return jsonify(image_response.model_dump())
 
-            title = os.environ.get('OPENROUTER_TITLE')
-            if title:
-                headers["X-Title"] = title
-
-            response = requests.post(
-                "https://openrouter.ai/api/v1/chat/completions",
-                headers=headers,
-                json={
-                    "model": model,
-                    "messages": [{"role": "user", "content": prompt}],
-                    "modalities": ["image", "text"]
-                }
-            )
-            response.raise_for_status()
-
-            # Transform the response to the format the frontend expects
-            openrouter_data = response.json()
-            # According to OpenRouter docs (https://openrouter.ai/docs/features/multimodal/image-generation)
-            # the image URL is in this path.
-            image_url = openrouter_data.get("choices", [{}])[0].get("message", {}).get("images", [{}])[0].get("image_url", {}).get("url")
-
-            if not image_url:
-                raise Exception("Image URL not found in OpenRouter response")
-
-            # The frontend expects a 'data' key for OpenRouter responses
-            transformed_response = {
-                "data": [{
-                    "url": image_url
-                }]
-            }
-            return jsonify(transformed_response)
-        else:
-            return jsonify({'error': f'Unsupported image model: {model}'}), 400
-
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Error calling Image Generation API: {e}")
-        return jsonify({'error': f'Failed to communicate with Image API: {e}'}), 502
+    except APIError as e:
+        logging.error(f"OpenRouter API Error for image generation: {e.status_code} - {e.response}")
+        # Pass through the status code from the API if available, otherwise default to 502
+        return jsonify({'error': f'Image generation failed: {e.message}'}), e.status_code or 502
     except Exception as e:
         logging.error(f"An unexpected error occurred in image generation: {e}")
         return jsonify({'error': 'An unexpected server error occurred during image generation.'}), 500
-
-# Flask will automatically handle serving other files from the static folder.
-# For example, if you had a style.css, a request to /style.css would work.
 
 if __name__ == '__main__':
     # Use the PORT environment variable if available, otherwise default to 3000
