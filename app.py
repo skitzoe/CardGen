@@ -122,9 +122,7 @@ def generate_image():
         # It handles the request formatting for us.
         image_response = client.images.generate(
             model=model,
-            prompt=prompt,
-            n=1,
-            size="1024x1024" # Using a fixed size for simplicity, as the card layout is square.
+            prompt=prompt
         )
 
         image_url = image_response.data[0].url
