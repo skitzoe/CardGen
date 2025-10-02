@@ -1,5 +1,7 @@
 import os
 import logging
+import requests
+import time
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 from openai import OpenAI, APIError
@@ -118,24 +120,54 @@ def generate_image():
         if not model or not prompt:
             return jsonify({'error': 'Missing model or prompt'}), 400
 
-        # The OpenAI library is the standard way to interact with OpenAI-compatible APIs like OpenRouter.
-        # It handles the request formatting for us.
-        image_response = client.images.generate(
-            model=model,
-            prompt=prompt
-        )
+        if model.startswith('google/'):
+            # For multimodal models like Gemini, we must use a raw requests call
+            # because the 'modalities' parameter is a custom OpenRouter feature
+            # not supported by the official OpenAI Python library.
+            headers = {
+                "Authorization": f"Bearer {open_router_api_key}",
+                "Content-Type": "application/json",
+            }
+            payload = {
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "modalities": ["image", "text"]
+            }
+            response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
+            response.raise_for_status() # Will raise an HTTPError for bad responses (4xx or 5xx)
 
-        image_url = image_response.data[0].url
-        if not image_url:
-            raise Exception("Image URL not found in OpenRouter response")
+            completion = response.json()
+            image_url = completion.get("choices", [{}])[0].get("message", {}).get("images", [{}])[0].get("image_url", {}).get("url")
 
-        # The frontend expects a 'data' key with a list containing an object with a 'url' key.
-        # The client.images.generate response is already in this format.
-        return jsonify(image_response.model_dump())
+            if not image_url:
+                raise Exception("Image URL not found in OpenRouter multimodal response")
 
+            # Transform the response to match the structure of the images.generate endpoint
+            response_data = {
+                "created": completion.get("created", int(time.time())),
+                "data": [{"url": image_url}]
+            }
+            return jsonify(response_data)
+        else:
+            # For standard image models like Stable Diffusion, we can use the openai library
+            image_response = client.images.generate(
+                model=model,
+                prompt=prompt,
+                n=1,
+                size="1024x1024"
+            )
+
+            image_url = image_response.data[0].url
+            if not image_url:
+                raise Exception("Image URL not found in OpenRouter image response")
+
+            return jsonify(image_response.model_dump())
+
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error calling OpenRouter with requests: {e}")
+        return jsonify({'error': f'Failed to communicate with OpenRouter API: {e}'}), 502
     except APIError as e:
         logging.error(f"OpenRouter API Error for image generation: {e.status_code} - {e.response}")
-        # Pass through the status code from the API if available, otherwise default to 502
         return jsonify({'error': f'Image generation failed: {e.message}'}), e.status_code or 502
     except Exception as e:
         logging.error(f"An unexpected error occurred in image generation: {e}")
