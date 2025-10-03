@@ -653,11 +653,12 @@
                     <h3 class="text-2xl font-semibold section-title">Card Actions</h3>
                     <p>Actions for: <strong id="selectedCardNameDisplay" class="text-purple-300"></strong></p>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl mx-auto">
-                    <button id="expandLoreButton" class="w-full button-secondary">?? Expand Lore <span id="expandLoreLoader" class="loader small-loader hidden"></span></button>
-                    <button id="suggestSynergiesButton" class="w-full button-secondary">?? Suggest Synergies <span id="suggestSynergiesLoader" class="loader small-loader hidden"></span></button>
-                    <button id="exportPngButton" class="w-full button-export">?? Export Selected Card</button>
-                    <button id="downloadAllZipButton" class="w-full button-export">?? Download All as ZIP</button>
+                <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 max-w-4xl mx-auto">
+                    <button id="saveCardButton" class="w-full button-primary">💾 Save to Collection</button>
+                    <button id="expandLoreButton" class="w-full button-secondary">🔮 Expand Lore <span id="expandLoreLoader" class="loader small-loader hidden"></span></button>
+                    <button id="suggestSynergiesButton" class="w-full button-secondary">🤝 Suggest Synergies <span id="suggestSynergiesLoader" class="loader small-loader hidden"></span></button>
+                    <button id="exportPngButton" class="w-full button-export">🖼️ Export Selected Card</button>
+                    <button id="downloadAllZipButton" class="w-full button-export">📦 Download All as ZIP</button>
                 </div>
                 <div id="expandedLoreDisplay" class="mt-4 text-sm text-gray-300 leading-relaxed hidden feature-display-area"></div>
                 <div id="synergiesDisplay" class="mt-4 text-sm text-gray-300 hidden feature-display-area space-y-2"></div>
@@ -743,6 +744,7 @@
         const suggestSynergiesLoader = document.getElementById('suggestSynergiesLoader');
         const exportPngButton = document.getElementById('exportPngButton');
         const downloadAllZipButton = document.getElementById('downloadAllZipButton');
+        const saveCardButton = document.getElementById('saveCardButton');
 
         // Modal elements
         const imageModal = document.getElementById('imageModal');
@@ -1548,6 +1550,38 @@
                 localStorage.removeItem('cardGenerationHistory');
                 renderHistory();
                 showMessage('History cleared.', 'success');
+            }
+        });
+
+        // Save card to database
+        saveCardButton.addEventListener('click', async () => {
+            if (!selectedCardElement || !currentCardData) {
+                showMessage("Please generate and select a card first.", "error");
+                return;
+            }
+
+            const imageUrl = selectedCardElement.querySelector('.card-image-display').src;
+            const cardToSave = {
+                ...currentCardData,
+                imageUrl: imageUrl // Add the selected image URL to the data
+            };
+
+            saveCardButton.disabled = true;
+            saveCardButton.innerHTML = '💾 Saving...';
+
+            try {
+                const response = await callBackendAPI('/api/save-card', cardToSave);
+                if (response.success) {
+                    showMessage('Card saved to your collection!', 'success');
+                } else {
+                    throw new Error(response.error || 'Failed to save card.');
+                }
+            } catch (error) {
+                console.error("Error saving card:", error);
+                showMessage(`Error: ${error.message}`, "error");
+            } finally {
+                saveCardButton.disabled = false;
+                saveCardButton.innerHTML = '💾 Save to Collection';
             }
         });
 

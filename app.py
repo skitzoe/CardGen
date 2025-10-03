@@ -5,9 +5,18 @@ import time
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 from openai import OpenAI, APIError
+from firebase_config import initialize_firebase
+from firebase_admin import db
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Initialize Firebase
+if not initialize_firebase():
+    logging.error("Could not initialize Firebase. Exiting.")
+    # In a real app, you might exit, but for this environment, we'll log and continue
+    # so the app can at least start for other purposes. The save endpoint will fail.
+    logging.warning("Firebase not initialized. Card saving will not work.")
 
 # --- API Key and Client Initialization ---
 open_router_api_key = os.environ.get('OPENROUTER_API_KEY')
@@ -195,6 +204,33 @@ def generate_image():
     except Exception as e:
         logging.error(f"An unexpected error occurred in image generation: {e}")
         return jsonify({'error': 'An unexpected server error occurred during image generation.'}), 500
+
+@app.route('/api/save-card', methods=['POST'])
+def save_card():
+    """
+    Saves a generated card to the Firebase Realtime Database.
+    """
+    try:
+        # Check if firebase was initialized
+        if 'FIREBASE_DATABASE_URL' not in os.environ:
+             return jsonify({'error': 'Firebase is not configured on the server.'}), 500
+
+        card_data = request.get_json()
+
+        if not card_data:
+            return jsonify({'error': 'No card data provided.'}), 400
+
+        # Get a reference to the 'cards' node in the database
+        ref = db.reference('cards')
+        # Push the new card data, which generates a unique key
+        new_card_ref = ref.push(card_data)
+
+        logging.info(f"Card saved successfully with key: {new_card_ref.key}")
+        return jsonify({'success': True, 'message': 'Card saved successfully!', 'cardId': new_card_ref.key}), 201
+
+    except Exception as e:
+        logging.error(f"An unexpected error occurred while saving the card: {e}")
+        return jsonify({'error': 'An unexpected server error occurred while saving the card.'}), 500
 
 if __name__ == '__main__':
     # Use the PORT environment variable if available, otherwise default to 3000
