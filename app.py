@@ -26,10 +26,12 @@ if not open_router_api_key:
     logging.warning("Warning: OPENROUTER_API_KEY environment variable not set. OpenRouter models will not be available.")
 
 # Point the OpenAI client to the OpenRouter API
-client = OpenAI(
-    base_url="https://openrouter.ai/api/v1",
-    api_key=open_router_api_key,
-)
+client = None
+if open_router_api_key:
+    client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=open_router_api_key,
+    )
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -44,6 +46,9 @@ def index():
 
 @app.route('/api/generate-concept', methods=['POST'])
 def generate_concept():
+    if not client:
+        return jsonify({'error': 'The server is not configured with an OpenRouter API key.'}), 503
+
     try:
         data = request.get_json()
 
@@ -98,6 +103,9 @@ The card name must be in title case."""
 
 @app.route('/api/generate-text', methods=['POST'])
 def generate_text():
+    if not client:
+        return jsonify({'error': 'The server is not configured with an OpenRouter API key.'}), 503
+
     try:
         data = request.get_json()
         prompt = data.get('prompt')
@@ -121,6 +129,9 @@ def generate_text():
 
 @app.route('/api/generate-image', methods=['POST'])
 def generate_image():
+    if not client and not deepai_api_key:
+        return jsonify({'error': 'The server is not configured with any image generation API keys.'}), 503
+
     try:
         data = request.get_json()
         model = data.get('model')
