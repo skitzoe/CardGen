@@ -9,14 +9,14 @@ from openai import OpenAI, APIError
 # Load environment variables from .env file
 load_dotenv()
 
-# --- OpenAI Client Initialization ---
-# Point the client to the OpenRouter API
+# --- API Key and Client Initialization ---
 open_router_api_key = os.environ.get('OPENROUTER_API_KEY')
-if not open_router_api_key:
-    # This is a fatal error for the server, so we log it and exit if the key is not set.
-    logging.critical("CRITICAL: OPENROUTER_API_KEY environment variable not set.")
-    exit("OPENROUTER_API_KEY is not set. The application cannot start.")
+deepai_api_key = os.environ.get('DEEPAI_API_KEY')
 
+if not open_router_api_key:
+    logging.warning("Warning: OPENROUTER_API_KEY environment variable not set. OpenRouter models will not be available.")
+
+# Point the OpenAI client to the OpenRouter API
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=open_router_api_key,
@@ -120,7 +120,30 @@ def generate_image():
         if not model or not prompt:
             return jsonify({'error': 'Missing model or prompt'}), 400
 
-        if model.startswith('google/'):
+        if model == 'deepai':
+            if not deepai_api_key:
+                return jsonify({'error': 'DEEPAI_API_KEY not set on the server'}), 500
+
+            response = requests.post(
+                "https://api.deepai.org/api/text2img",
+                data={'text': prompt},
+                headers={'api-key': deepai_api_key}
+            )
+            response.raise_for_status()
+            deepai_data = response.json()
+            image_url = deepai_data.get('output_url')
+
+            if not image_url:
+                raise Exception("Image URL not found in DeepAI response")
+
+            # Transform the response to match the structure of the other APIs
+            response_data = {
+                "created": deepai_data.get("id", int(time.time())),
+                "data": [{"url": image_url}]
+            }
+            return jsonify(response_data)
+
+        elif model.startswith('google/'):
             # For multimodal models like Gemini, we must use a raw requests call
             # because the 'modalities' parameter is a custom OpenRouter feature
             # not supported by the official OpenAI Python library.
@@ -134,7 +157,7 @@ def generate_image():
                 "modalities": ["image", "text"]
             }
             response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
-            response.raise_for_status() # Will raise an HTTPError for bad responses (4xx or 5xx)
+            response.raise_for_status()
 
             completion = response.json()
             image_url = completion.get("choices", [{}])[0].get("message", {}).get("images", [{}])[0].get("image_url", {}).get("url")
@@ -164,8 +187,8 @@ def generate_image():
             return jsonify(image_response.model_dump())
 
     except requests.exceptions.RequestException as e:
-        logging.error(f"Error calling OpenRouter with requests: {e}")
-        return jsonify({'error': f'Failed to communicate with OpenRouter API: {e}'}), 502
+        logging.error(f"Error calling an external API with requests: {e}")
+        return jsonify({'error': f'Failed to communicate with an external API: {e}'}), 502
     except APIError as e:
         logging.error(f"OpenRouter API Error for image generation: {e.status_code} - {e.response}")
         return jsonify({'error': f'Image generation failed: {e.message}'}), e.status_code or 502

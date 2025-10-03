@@ -52,6 +52,9 @@ The application requires API keys for the AI services it uses to generate conten
     # Get your key from https://openrouter.ai/keys
     OPENROUTER_API_KEY="sk-or-..."
 
+    # Get your key from https://deepai.org/
+    DEEPAI_API_KEY="your-deepai-api-key"
+
     # Optional: For OpenRouter integration, you can set your site URL and app title.
     # This helps identify your app on the OpenRouter dashboard.
     # See https://openrouter.ai/docs#headers for more info.
