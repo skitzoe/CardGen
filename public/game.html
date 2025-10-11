@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CardGen - Game Board</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+        .glass-pane {
+            background: rgba(36, 36, 64, 0.7);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .player-area {
+            display: flex;
+            flex-direction: column;
+            height: 50vh;
+            padding: 1rem;
+        }
+        .board-zone, .hand-zone {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            justify-content: center;
+            min-height: 140px;
+            padding: 0.5rem;
+            border-radius: 0.75rem;
+            background: rgba(0,0,0,0.2);
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+        }
+        .hand-zone {
+            min-height: 160px;
+        }
+        .game-card {
+            width: 90px;
+            height: 135px;
+            background: linear-gradient(145deg, #2a2a4e, #1a1a2e);
+            border: 2px solid #4a4a7e;
+            border-radius: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.25rem;
+            font-size: 0.6rem;
+            text-align: center;
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+        .game-card:hover {
+            transform: translateY(-10px) scale(1.1);
+            border-color: #7f5af0;
+            z-index: 10;
+        }
+        .attacking-card {
+            border-color: #ef4444 !important; /* Red-500 */
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.8);
+        }
+        .game-card .card-art {
+            width: 100%;
+            height: 60px;
+            background-color: #4a4a7e;
+            border-radius: 0.25rem;
+            object-fit: cover;
+        }
+        .game-card .card-name {
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+        }
+        .game-card .card-stats {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            font-size: 0.5rem;
+        }
+        .card-back {
+            background: linear-gradient(145deg, #7f5af0, #4a4a7e);
+        }
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+        }
+        .deck-graveyard {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            align-items: center;
+            font-size: 0.8rem;
+        }
+        .deck-pile, .graveyard-pile {
+            width: 70px;
+            height: 100px;
+            border-radius: 0.5rem;
+            border: 2px solid #4a4a7e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .deck-pile { background: #1e3a8a; }
+        .graveyard-pile { background: #4b0000; }
+
+        .button-primary {
+            padding: 0.75rem 1.25rem; border-radius: 0.5rem; font-weight: 600; transition: all 0.3s ease;
+            text-align: center; border: none; cursor: pointer; background: linear-gradient(135deg, #7f5af0, #9333ea);
+            color: white; box-shadow: 0 4px 15px rgba(127,90,240,0.3);
+        }
+        .button-primary:hover {
+            background: linear-gradient(135deg, #6a48d0, #7c3aed); transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen">
+
+    <!-- Opponent's Area -->
+    <div id="opponentArea" class="player-area">
+        <div class="flex-grow w-full flex items-center gap-8">
+            <div id="opponentInfo" class="player-info glass-pane">
+                <div class="text-4xl font-bold text-red-400" id="opponentHealth">20</div>
+                <div>
+                    <h2 class="text-xl font-bold">AI Opponent</h2>
+                    <p class="text-sm text-purple-300">Cards in hand: <span id="opponentHandCount">5</span></p>
+                </div>
+            </div>
+            <div class="flex-grow board-zone" id="opponentBoard">
+                <!-- Opponent's cards on board -->
+            </div>
+            <div class="deck-graveyard">
+                <div class="deck-pile" id="opponentDeckCount">25</div>
+                <div class="graveyard-pile" id="opponentGraveyardCount">0</div>
+            </div>
+        </div>
+        <div class="hand-zone" id="opponentHand">
+            <!-- Opponent's hand (backs of cards) -->
+        </div>
+    </div>
+
+    <!-- Center Bar -->
+    <div class="flex-shrink-0 h-16 glass-pane flex items-center justify-between px-8 z-10">
+        <div>
+            <h3 class="text-xl font-bold">Turn: <span id="turnCounter">1</span></h3>
+        </div>
+        <div id="gameLog" class="text-center text-purple-300">Game Started! It's your turn.</div>
+        <div>
+            <button id="endTurnButton" class="button-primary">End Turn</button>
+        </div>
+    </div>
+
+    <!-- Player's Area -->
+    <div id="playerArea" class="player-area">
+        <div class="hand-zone" id="playerHand">
+            <!-- Player's hand -->
+        </div>
+        <div class="flex-grow w-full flex items-center gap-8">
+            <div class="player-info glass-pane">
+                <div class="text-4xl font-bold text-green-400" id="playerHealth">20</div>
+                <div>
+                    <h2 class="text-xl font-bold">You</h2>
+                    <p class="text-sm text-purple-300">UID: <span id="playerUid">...</span></p>
+                </div>
+            </div>
+            <div class="flex-grow board-zone" id="playerBoard">
+                <!-- Player's cards on board -->
+            </div>
+            <div class="deck-graveyard">
+                <div class="deck-pile" id="playerDeckCount">25</div>
+                <div class="graveyard-pile" id="playerGraveyardCount">0</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const API_ORIGIN = '';
+
+        // --- DOM Elements ---
+        const endTurnButton = document.getElementById('endTurnButton');
+        const playerHealthEl = document.getElementById('playerHealth');
+        const opponentHealthEl = document.getElementById('opponentHealth');
+        const playerDeckCountEl = document.getElementById('playerDeckCount');
+        const opponentDeckCountEl = document.getElementById('opponentDeckCount');
+        const playerGraveyardCountEl = document.getElementById('playerGraveyardCount');
+        const opponentGraveyardCountEl = document.getElementById('opponentGraveyardCount');
+        const opponentHandCountEl = document.getElementById('opponentHandCount');
+        const playerHandEl = document.getElementById('playerHand');
+        const opponentHandEl = document.getElementById('opponentHand');
+        const playerBoardEl = document.getElementById('playerBoard');
+        const opponentBoardEl = document.getElementById('opponentBoard');
+        const opponentInfoEl = document.getElementById('opponentInfo');
+        const gameLogEl = document.getElementById('gameLog');
+        const turnCounterEl = document.getElementById('turnCounter');
+        const playerUidEl = document.getElementById('playerUid');
+
+        // --- Game State ---
+        let gameId = null;
+        let auth;
+        let isFirebaseInitialized = false;
+        let selectedAttackerId = null;
+
+        // --- Firebase Initialization ---
+        async function initializeApp() {
+            try {
+                gameLogEl.textContent = "Connecting to game services...";
+                const response = await fetch(`${API_ORIGIN}/api/firebase-config`);
+                if (!response.ok) throw new Error(`Failed to fetch Firebase config: ${response.status}`);
+                const firebaseConfig = await response.json();
+                if (!firebaseConfig.apiKey) {
+                    gameLogEl.textContent = "Game services are unavailable. The backend is not configured correctly.";
+                    throw new Error("Firebase API key is missing.");
+                }
+
+                firebase.initializeApp(firebaseConfig);
+                auth = firebase.auth();
+                setupAuthListener();
+            } catch (error) {
+                console.error('Error initializing Firebase:', error);
+                gameLogEl.textContent = "Error: Could not connect to backend services.";
+                endTurnButton.disabled = true;
+            }
+        }
+
+        function setupAuthListener() {
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    playerUidEl.textContent = user.uid.substring(0, 8) + '...';
+                    initializeGame();
+                } else {
+                    gameLogEl.textContent = "Please sign in on the main page to play.";
+                }
+            });
+        }
+
+        async function initializeGame() {
+            const deckId = new URLSearchParams(window.location.search).get('deckId');
+            if (!deckId) {
+                gameLogEl.textContent = "No deck selected. Please start a game from the 'Manage Decks' screen.";
+                return;
+            }
+            
+            gameLogEl.textContent = "Starting new game...";
+            try {
+                const user = auth.currentUser;
+                if (!user) throw new Error("Authentication required.");
+                const token = await user.getIdToken();
+
+                const response = await fetch(`${API_ORIGIN}/api/game/start`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ deckId: deckId })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to start game.');
+                }
+
+                const gameState = await response.json();
+                gameId = gameState.gameId;
+                renderGameState(gameState);
+
+            } catch (error) {
+                console.error("Error starting game:", error);
+                gameLogEl.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        function renderGameState(state) {
+            if (!state) return;
+
+            // Ensure player objects and their array properties exist to prevent errors
+            const player1 = state.player1 || {};
+            const player2 = state.player2 || {};
+            player1.hand = player1.hand || [];
+            player1.deck = player1.deck || [];
+            player1.board = player1.board || [];
+            player1.graveyard = player1.graveyard || [];
+            player2.hand = player2.hand || [];
+            player2.deck = player2.deck || [];
+            player2.board = player2.board || [];
+            player2.graveyard = player2.graveyard || [];
+
+            // Update player info
+            playerHealthEl.textContent = player1.health;
+            opponentHealthEl.textContent = player2.health;
+            turnCounterEl.textContent = state.turn;
+
+            // Update counts
+            playerDeckCountEl.textContent = player1.deck.length;
+            opponentDeckCountEl.textContent = player2.deck.length;
+            playerGraveyardCountEl.textContent = player1.graveyard.length;
+            opponentGraveyardCountEl.textContent = player2.graveyard.length;
+            opponentHandCountEl.textContent = player2.hand.length;
+
+            // Render Player's Hand
+            playerHandEl.innerHTML = '';
+            player1.hand.forEach(card => {
+                const cardEl = createGameCardElement(card);
+                playerHandEl.appendChild(cardEl);
+            });
+
+            // Render Opponent's Hand (card backs)
+            opponentHandEl.innerHTML = '';
+            for (let i = 0; i < player2.hand.length; i++) {
+                const cardBack = document.createElement('div');
+                cardBack.className = 'game-card card-back';
+                opponentHandEl.appendChild(cardBack);
+            }
+
+            // Render Board state (for both players)
+            playerBoardEl.innerHTML = '';
+            player1.board.forEach(card => {
+                const cardEl = createGameCardElement(card);
+                cardEl.style.cursor = 'default'; // Cards on board aren't playable from hand
+                playerBoardEl.appendChild(cardEl); // This will be changed to allow attacking
+            });
+
+            opponentBoardEl.innerHTML = '';
+            player2.board.forEach(card => {
+                const cardEl = createGameCardElement(card);
+                cardEl.style.cursor = 'default';
+                opponentBoardEl.appendChild(cardEl);
+            });
+
+            // Re-apply attacking-card class if an attacker is still selected
+            if (selectedAttackerId) {
+                const attackerEl = playerBoardEl.querySelector(`[data-card-id="${selectedAttackerId}"]`);
+                if (attackerEl) {
+                    attackerEl.classList.add('attacking-card');
+                } else {
+                    // The attacker was probably destroyed, so reset selection
+                    selectedAttackerId = null;
+                }
+            }
+
+            // Update cursors based on game state
+            const opponentHasCardsOnBoard = opponentBoardEl.children.length > 0;
+            playerBoardEl.querySelectorAll('.game-card').forEach(c => c.style.cursor = 'pointer');
+            
+            if (selectedAttackerId) {
+                opponentBoardEl.querySelectorAll('.game-card').forEach(c => c.style.cursor = 'crosshair');
+                opponentInfoEl.style.cursor = opponentHasCardsOnBoard ? 'default' : 'crosshair';
+            } else {
+                opponentBoardEl.querySelectorAll('.game-card').forEach(c => c.style.cursor = 'default');
+                opponentInfoEl.style.cursor = 'default';
+            }
+
+
+            gameLogEl.textContent = `Turn ${state.turn}: It's ${state.activePlayer === 'player1' ? 'your' : "the opponent's"} turn.`;
+        }
+
+        function createGameCardElement(cardData) {
+            const el = document.createElement('div');
+            el.className = 'game-card';
+            el.dataset.cardId = cardData.id;
+            el.title = `${cardData.cardName}\nATK: ${cardData.stats.attack} | DEF: ${cardData.currentDefense ?? cardData.stats.defense}`;
+
+            el.innerHTML = `
+                <img src="${cardData.imageUrl}" alt="${cardData.cardName}" class="card-art">
+                <div class="card-name">${cardData.cardName}</div>
+                <div class="card-stats">
+                    <span class="text-red-400">${cardData.stats.attack}</span>
+                    <span class="text-blue-400">${cardData.stats.defense}</span>
+                    <span class="text-green-400">${cardData.currentDefense ?? cardData.stats.defense}</span>
+                </div>
+            `;
+            return el;
+        }
+
+
+        // --- Game Actions ---
+        async function performGameAction(action) {
+            if (!gameId) {
+                gameLogEl.textContent = "Game not started.";
+                return;
+            }
+            try {
+                const user = auth.currentUser;
+                if (!user) throw new Error("Authentication required.");
+                const token = await user.getIdToken();
+
+                const response = await fetch(`${API_ORIGIN}/api/game/${gameId}/action`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(action)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to perform action.');
+                }
+
+                const newGameState = await response.json();
+                if (action.type !== 'ATTACK') selectedAttackerId = null; // Reset attacker on non-attack actions
+                renderGameState(newGameState);
+
+            } catch (error) {
+                console.error("Error performing game action:", error);
+                gameLogEl.textContent = `Action failed: ${error.message}`;
+            }
+        }
+        
+        // Helper to introduce a delay
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // --- Event Listeners ---
+        playerHandEl.addEventListener('click', (event) => {
+            const cardElement = event.target.closest('.game-card');
+            if (cardElement && cardElement.dataset.cardId) {
+                performGameAction({ type: 'PLAY_CARD', cardId: cardElement.dataset.cardId });
+            }
+        });
+
+        playerBoardEl.addEventListener('click', (event) => {
+            const cardElement = event.target.closest('.game-card');
+            if (!cardElement || !cardElement.dataset.cardId) return;
+
+            const cardId = cardElement.dataset.cardId;
+
+            // Deselect if clicking the same card
+            if (selectedAttackerId === cardId) {
+                selectedAttackerId = null;
+                cardElement.classList.remove('attacking-card');
+                gameLogEl.textContent = "Attack canceled. Select an attacker.";
+                opponentBoardEl.querySelectorAll('.game-card').forEach(c => c.style.cursor = 'default');
+            } else {
+                // Deselect old attacker if any
+                if (selectedAttackerId) {
+                    const oldAttacker = playerBoardEl.querySelector('.attacking-card');
+                    if (oldAttacker) oldAttacker.classList.remove('attacking-card');
+                }
+                // Select new attacker
+                selectedAttackerId = cardId;
+                cardElement.classList.add('attacking-card');
+                gameLogEl.textContent = `Selected ${cardElement.querySelector('.card-name').textContent}. Choose a target.`;
+                opponentBoardEl.querySelectorAll('.game-card').forEach(c => c.style.cursor = 'crosshair');
+            }
+        });
+
+        opponentBoardEl.addEventListener('click', (event) => {
+            const targetElement = event.target.closest('.game-card');
+            if (!targetElement || !targetElement.dataset.cardId) return;
+
+            if (selectedAttackerId) {
+                const targetId = targetElement.dataset.cardId;
+                performGameAction({ type: 'ATTACK', attackerId: selectedAttackerId, targetId: targetId });
+            }
+        });
+
+        opponentInfoEl.addEventListener('click', () => {
+            const opponentHasCardsOnBoard = opponentBoardEl.children.length > 0;
+            // Allow attacking player directly only if their board is empty
+            if (selectedAttackerId && !opponentHasCardsOnBoard) {
+                gameLogEl.textContent = `Attacking the opponent directly!`;
+                performGameAction({ type: 'ATTACK_PLAYER', attackerId: selectedAttackerId });
+            }
+        });
+
+        endTurnButton.addEventListener('click', async () => {
+            gameLogEl.textContent = "Ending your turn...";
+            endTurnButton.disabled = true;
+            await performGameAction({ type: 'END_TURN' });
+            
+            gameLogEl.textContent = "Opponent is thinking...";
+            await sleep(1000); // Wait a second to simulate AI thinking
+            endTurnButton.disabled = false;
+        });
+
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
+
+</body>
+</html>

@@ -8,6 +8,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -95,19 +101,20 @@
             position: absolute;
             top: 25px;
             left: 65px;
-            right: 20px;
+            right: 20px; /* Keep for width calculation */
             height: 40px;
-            display: flex;
+            display: flex; /* Use flexbox for centering */
             align-items: center;
+            justify-content: center;
             z-index: 11;
             background: rgba(0,0,0,0.3);
             border-radius: 8px;
-            padding: 0 15px;
+            padding: 0 15px; /* Padding on the container */
             backdrop-filter: blur(5px);
             transition: background-color 0.5s ease;
         }
         #cardNameDisplay {
-            font-size: 1.1rem;
+            font-size: 1.4rem;
             font-weight: bold;
             color: #fff;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.9);
@@ -133,22 +140,17 @@
             border: 1px solid rgba(255,255,255,0.1);
         }
         .card-lore-text {
-             flex-grow: 1;
-             overflow-y: auto;
+             overflow-y: hidden; /* We will manage overflow with JS */
         }
 
-        .triggered-ability-area {
-            margin-top: 8px;
-            padding-top: 8px;
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        .card-lore-text .triggered-ability-text {
             font-style: italic;
-            font-size: 0.75rem;
             color: #c7d2fe;
         }
 
         .card-body-wrapper {
             position: absolute;
-            top: 280px;
+            top: 270px;
             bottom: 35px;
             left: 20px;
             right: 20px;
@@ -178,13 +180,13 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.7);
             backdrop-filter: blur(5px);
         }
-
-        .stat-box .stat-label { font-size: 0.7rem; opacity: 0.9; margin: 0; }
+        /* Flexbox-based centering for stat text (more stable for html2canvas) */
+        .stat-box .stat-label { font-size: 0.7rem; opacity: 0.9; margin: 0; line-height: 1; }
         .stat-box .stat-value { font-size: 1.5rem; line-height: 1.2; text-shadow: 2px 2px 4px rgba(0,0,0,0.9); }
 
-        .stat-attack { background: rgba(220,38,38,0.5); }
-        .stat-defense { background: rgba(59,130,246,0.5); }
-        .stat-speed { background: rgba(34,197,94,0.5); }
+        .stat-attack { background: rgba(220,38,38,0.5); } /* Red */
+        .stat-defense { background: rgba(59,130,246,0.5); } /* Blue */
+        .stat-speed { background: rgba(34,197,94,0.5); } /* Green */
 
         .stat-special-ability-area {
             position: absolute;
@@ -192,17 +194,15 @@
             left: 20px;
             right: 20px;
             height: 24px;
-            z-index: 11;
-            text-align: center;
-            font-size: 0.8rem;
+            display: flex; /* Use flexbox for centering */
+            align-items: center;
+            justify-content: center;
+            z-index: 11;            
             color: #fff;
             background: rgba(127,90,240,0.6);
             border-radius: 8px;
-            font-weight: bold;
             overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            padding: 2px 10px;
+            padding: 2px 10px; /* Padding on the container */
             text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
             backdrop-filter: blur(5px);
             border: 1px solid rgba(255,255,255,0.1);
@@ -218,8 +218,8 @@
             background: linear-gradient(145deg, #0ea5e9, #0284c7);
             color: white;
             font-size: 1.5rem;
-            font-weight: bold;
-            display: flex;
+            font-weight: bold;            
+            display: flex; /* Use flexbox for centering */
             align-items: center;
             justify-content: center;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
@@ -482,31 +482,12 @@
         .exporting-card .button-regenerate {
             display: none !important;
         }
-        .exporting-card .card-body-wrapper {
-            display: flex !important;
-        }
-        .exporting-card .card-lore-area { /* Force explicit position and size */
-            display: flex !important;
-            flex-direction: column !important;
-            top: 0 !important;
-            height: 100% !important;
-        }
-        .exporting-card .card-lore-text {
-            flex-grow: 0 !important; /* Let the content define the height */
-            position: relative !important; /* Help renderer with positioning */
-            overflow: visible !important; /* Ensure all text is captured */
-        }
-        /* Explicitly set line-height for html2canvas to prevent text shifting */
-        .exporting-card .card-lore-text, .exporting-card .triggered-ability-area p { line-height: 1.4 !important; }
-        /* Further stabilize positioning for html2canvas export */
-        .exporting-card .card-name-display, .exporting-card .stat-value {
-            position: relative; /* Helps canvas renderer calculate position more accurately */
-            line-height: 1.2 !important; /* Enforce consistent line height */
-        }
-        .exporting-card .triggered-ability-area p {
-            position: relative !important; /* Help renderer with positioning */
-        }
 
+        /*
+         * The export CSS is being removed. The new centering method above works for both
+         * on-screen display and html2canvas, making special export styles for text unnecessary.
+         * This ensures a 1-to-1 match between the screen and the exported PNG.
+        */
         .view-art-button {
             position: absolute;
             top: 12px;
@@ -539,9 +520,62 @@
             transform: scale(1.1) !important;
         }
 
+        #searchModal.visible,
+        #historyModal.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
         #imageModal.visible {
             opacity: 1;
             pointer-events: auto;
+        }
+
+        /* Dropdown Menu Styles */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            background-color: #1a1a2e;
+            min-width: 200px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5);
+            z-index: 100;
+            border-radius: 0.5rem;
+            border: 1px solid #4a4a7e;
+            padding: 0.5rem 0;
+            margin-top: 0.5rem;
+        }
+
+        .dropdown-content a, .dropdown-content button {
+            color: #e0e0e0;
+            padding: 0.75rem 1.25rem;
+            text-decoration: none;
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: none;
+        }
+        .dropdown-content a:hover, .dropdown-content button:hover { background-color: #7f5af0; }
+        .dropdown:hover .dropdown-content { display: block; }
+
+        /* Sponsorship Section Styles */
+        .sponsorship-section {
+            background: rgba(15, 15, 35, 0.6);
+            border: 1px solid rgba(74, 74, 126, 0.5);
+            backdrop-filter: blur(10px);
+        }
+        .affiliate-link {
+            background: rgba(42, 42, 78, 0.8);
+            border: 1px solid rgba(74, 74, 126, 0.8);
+            transition: all 0.3s ease;
+        }
+        .affiliate-link:hover {
+            background: rgba(58, 58, 94, 0.9);
+            border-color: #7f5af0;
         }
     </style>
 </head>
@@ -566,6 +600,7 @@
                     <label class="radio-label"><input type="radio" name="cardType" value="Alien"><span>Alien</span></label>
                     <label class="radio-label"><input type="radio" name="cardType" value="Zombie"><span>Zombie</span></label>
                     <label class="radio-label"><input type="radio" name="cardType" value="Power Up"><span>Power Up</span></label>
+                    <label class="radio-label"><input type="radio" name="cardType" value="Weapon"><span>Weapon</span></label>
                 </div>
             </div>
 
@@ -573,10 +608,16 @@
                 <label for="artStyleSelect" class="block text-sm font-medium text-purple-300 mb-2">Art Style:</label>
                 <select id="artStyleSelect" class="w-full p-3 rounded-lg input-field">
                     <option value="none" selected>Default (Cinematic Fantasy)</option>
-                    <option value="photorealistic">Photorealistic</option>
                     <option value="anime">Anime / Manga</option>
+                    <option value="comic_book">Comic Book</option>
+                    <option value="cyberpunk">Cyberpunk</option>
+                    <option value="mtg_style">Magic: The Gathering Style</option>
                     <option value="pixel_art">Pixel Art</option>
+                    <option value="photorealistic">Photorealistic</option>
+                    <option value="rpg_style">RPG Video Game (e.g., Final Fantasy)</option>
+                    <option value="steampunk">Steampunk</option>
                     <option value="watercolor">Watercolor</option>
+                    <option value="yugioh_style">Yu-Gi-Oh! Style</option>
                 </select>
             </div>
 
@@ -584,10 +625,20 @@
                 <label for="imageModelSelect" class="block text-sm font-medium text-purple-300 mb-2">Image Model:</label>
                 <select id="imageModelSelect" class="w-full p-3 rounded-lg input-field">
                     <option value="deepai">DeepAI (Standard)</option>
-                    <option value="stabilityai/stable-diffusion-3" selected>Stable Diffusion 3 (Recommended)</option>
-                    <option value="stabilityai/stable-diffusion-xl">Stable Diffusion XL</option>
+                    <option value="dreamstudio">DreamStudio (Stable Diffusion XL)</option>
                     <option value="google/gemini-2.5-flash-image-preview">Google Gemini 2.5 Flash</option>
                 </select>
+            </div>
+
+            <div>
+                <label for="imageUploadInput" class="block text-sm font-medium text-purple-300 mb-2">Upload Image (optional, for img2img):</label>
+                <input type="file" id="imageUploadInput" accept="image/*" class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-800 file:text-white hover:file:bg-purple-700 cursor-pointer">
+                <button id="clearImageUpload" class="text-xs text-red-400 hover:text-red-300 mt-1 hidden">Clear Image</button>
+            </div>
+
+            <div>
+                <label for="negativePromptInput" class="block text-sm font-medium text-purple-300 mb-2">Negative Prompt (optional):</label>
+                <textarea id="negativePromptInput" rows="2" class="w-full p-3 rounded-lg input-field focus:ring-2 focus:ring-purple-500 outline-none" placeholder="e.g., text, words, letters, signature, watermark, blurry, deformed">text, words, letters, signature, watermark, ugly, deformed, noisy, blurry, distorted, out of focus, bad anatomy, extra limbs, poorly drawn face, poorly drawn hands, missing fingers</textarea>
             </div>
 
             <!-- Conditional Sub-Type Options -->
@@ -614,6 +665,13 @@
                     <label for="powerUpEffectSelect" class="block text-sm font-medium text-purple-300 mb-2">Power Up Effect:</label>
                     <select id="powerUpEffectSelect" class="w-full p-3 rounded-lg input-field">
                         <option>Healing</option><option>Destructive</option><option>Enhancement</option><option>Debuff</option>
+                    </select>
+                </div>
+                <div id="weaponOptions" class="hidden">
+                    <label for="weaponRangeSelect" class="block text-sm font-medium text-purple-300 mb-2">Weapon Range:</label>
+                    <select id="weaponRangeSelect" class="w-full p-3 rounded-lg input-field">
+                        <option>Short distant weapon</option>
+                        <option>Long distant weapon</option>
                     </select>
                 </div>
             </div>
@@ -654,17 +712,54 @@
                     <p>Actions for: <strong id="selectedCardNameDisplay" class="text-purple-300"></strong></p>
                 </div>
                 <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 max-w-4xl mx-auto">
-                    <button id="saveCardButton" class="w-full button-primary">💾 Save to Collection</button>
-                    <button id="expandLoreButton" class="w-full button-secondary">🔮 Expand Lore <span id="expandLoreLoader" class="loader small-loader hidden"></span></button>
-                    <button id="suggestSynergiesButton" class="w-full button-secondary">🤝 Suggest Synergies <span id="suggestSynergiesLoader" class="loader small-loader hidden"></span></button>
-                    <button id="exportPngButton" class="w-full button-export">🖼️ Export Selected Card</button>
-                    <button id="downloadAllZipButton" class="w-full button-export">📦 Download All as ZIP</button>
+                    <button id="saveCardButton" class="w-full button-primary">&#x1F4BE; Save to Collection</button>
+                    <button id="expandLoreButton" class="w-full button-secondary">&#x1F52E; Expand Lore <span id="expandLoreLoader" class="loader small-loader hidden"></span></button>
+                    <button id="suggestSynergiesButton" class="w-full button-secondary">&#x1F91D; Suggest Synergies <span id="suggestSynergiesLoader" class="loader small-loader hidden"></span></button>
+                    <button id="exportPngButton" class="w-full button-export">&#x1F5BC;&#xFE0F; Export Selected Card</button>
+                    <button id="downloadAllZipButton" class="w-full button-export">&#x1F4E6; Download All as ZIP</button>
                 </div>
                 <div id="expandedLoreDisplay" class="mt-4 text-sm text-gray-300 leading-relaxed hidden feature-display-area"></div>
                 <div id="synergiesDisplay" class="mt-4 text-sm text-gray-300 hidden feature-display-area space-y-2"></div>
             </div>
         </div>
     </div>
+
+    <!-- Sponsorship Section -->
+    <div class="w-full max-w-4xl p-6 mt-8 rounded-2xl sponsorship-section">
+        <h3 class="text-center text-lg font-semibold text-purple-300 mb-4">Support The Project</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
+            <!-- Example Affiliate Link 1 -->
+            <a href="https://www.buymeacoffee.com/yourusername" target="_blank" rel="noopener noreferrer" class="block p-4 rounded-lg affiliate-link">
+                <p class="font-bold text-white">Buy Me a Coffee</p>
+                <p class="text-sm text-gray-400">If you enjoy this tool, consider supporting its development!</p>
+            </a>
+            <!-- Example Affiliate Link 2 -->
+            <a href="https://www.amazon.com/?tag=youraffiliatetag-20" target="_blank" rel="noopener noreferrer" class="block p-4 rounded-lg affiliate-link">
+                <p class="font-bold text-white">Shop on Amazon</p>
+                <p class="text-sm text-gray-400">Use our affiliate link to support us at no extra cost to you.</p>
+            </a>
+        </div>
+    </div>
+
+    <!-- Search Modal -->
+    <div id="searchModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 opacity-0 pointer-events-none transition-opacity duration-300" style="backdrop-filter: blur(8px);">
+        <div class="glass-card p-6 rounded-lg max-w-5xl w-full max-h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-purple-300">Search Collection</h2>
+                <button id="closeSearchButton" class="text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-75 transition-transform hover:scale-110">&times;</button>
+            </div>
+            <div class="mb-4">
+                <input type="text" id="searchInput" class="w-full p-3 rounded-lg input-field focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Search by card name...">
+            </div>
+            <div id="searchGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 overflow-y-auto flex-grow">
+                <!-- Search results will be injected here -->
+            </div>
+            <div id="searchMessage" class="text-center text-gray-400 mt-4">
+                <!-- Search status messages will appear here -->
+            </div>
+        </div>
+    </div>
+    <!-- End Search Modal -->
 
     <!-- History Modal -->
     <div id="historyModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 opacity-0 pointer-events-none transition-opacity duration-300" style="backdrop-filter: blur(8px);">
@@ -696,8 +791,116 @@
     </div>
     <!-- End Image Modal -->
 
+    <!-- Deck Builder Modal -->
+    <div id="deckBuilderModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 opacity-0 pointer-events-none transition-opacity duration-300" style="backdrop-filter: blur(8px);">
+        <div class="glass-card p-6 rounded-lg max-w-6xl w-full max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 class="text-2xl font-bold text-purple-300">Deck Builder</h2>
+                <button id="closeDeckBuilderButton" class="text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-75 transition-transform hover:scale-110">&times;</button>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-grow min-h-0">
+                <!-- Left Panel: Card Collection -->
+                <div class="flex flex-col bg-black/20 p-4 rounded-lg">
+                    <h3 class="text-lg font-semibold text-purple-400 mb-2 flex-shrink-0">Your Collection</h3>
+                    <div id="deckBuilderCollectionGrid" class="grid grid-cols-3 sm:grid-cols-4 gap-4 overflow-y-auto flex-grow">
+                        <!-- Collection cards will be injected here -->
+                    </div>
+                    <div id="collectionMessage" class="text-center text-gray-400 mt-4"></div>
+                </div>
+
+                <!-- Right Panel: Current Deck -->
+                <div class="flex flex-col bg-black/20 p-4 rounded-lg">
+                    <div class="flex justify-between items-center mb-2 flex-shrink-0">
+                        <h3 class="text-lg font-semibold text-purple-400">Current Deck</h3>
+                        <span id="deckCardCount" class="text-sm text-gray-300">0 / 30 cards</span>
+                    </div>
+                    <div id="deckBuilderCurrentDeckGrid" class="grid grid-cols-3 sm:grid-cols-4 gap-4 overflow-y-auto flex-grow">
+                        <!-- Cards added to the deck will appear here -->
+                    </div>
+                    <div class="mt-4 flex gap-4 flex-shrink-0">
+                        <input type="text" id="deckNameInput" class="w-full p-2 rounded-lg input-field" placeholder="Enter Deck Name...">
+                        <button id="saveDeckButton" class="button-primary flex-shrink-0">Save Deck</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- End Deck Builder Modal -->
+
+    <!-- Deck Management Modal -->
+    <div id="deckManagementModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 opacity-0 pointer-events-none transition-opacity duration-300" style="backdrop-filter: blur(8px);">
+        <div class="glass-card p-6 rounded-lg max-w-6xl w-full max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 class="text-2xl font-bold text-purple-300">Manage Decks</h2>
+                <button id="closeDeckManagementButton" class="text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-75 transition-transform hover:scale-110">&times;</button>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-grow min-h-0">
+                <!-- Left Panel: Deck List -->
+                <div class="lg:col-span-1 flex flex-col bg-black/20 p-4 rounded-lg">
+                    <h3 class="text-lg font-semibold text-purple-400 mb-2 flex-shrink-0">Your Decks</h3>
+                    <div id="deckManagementList" class="overflow-y-auto flex-grow space-y-2">
+                        <!-- Deck list will be injected here -->
+                    </div>
+                    <div id="deckManagementMessage" class="text-center text-gray-400 mt-4"></div>
+                </div>
+
+                <!-- Right Panel: Selected Deck's Cards -->
+                <div class="lg:col-span-2 flex flex-col bg-black/20 p-4 rounded-lg">
+                    <h3 id="selectedDeckTitle" class="text-lg font-semibold text-purple-400 mb-2 flex-shrink-0">Select a deck to view its cards</h3>
+                    <div id="deckManagementCardGrid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4 overflow-y-auto flex-grow">
+                        <!-- Cards from the selected deck will appear here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Modal -->
+    <div id="authModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 opacity-0 pointer-events-none transition-opacity duration-300" style="backdrop-filter: blur(8px);">
+        <div class="glass-card p-8 rounded-lg max-w-md w-full">
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="authTitle" class="text-2xl font-bold text-purple-300">Login</h2>
+                <button id="closeAuthModalButton" class="text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-75 transition-transform hover:scale-110">&times;</button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label for="authEmail" class="block text-sm font-medium text-purple-300 mb-2">Email:</label>
+                    <input type="email" id="authEmail" class="w-full p-3 rounded-lg input-field" placeholder="you@example.com">
+                </div>
+                <div>
+                    <label for="authPassword" class="block text-sm font-medium text-purple-300 mb-2">Password:</label>
+                    <input type="password" id="authPassword" class="w-full p-3 rounded-lg input-field" placeholder="••••••••">
+                </div>
+                <div id="authMessage" class="text-sm text-red-400"></div>
+                <button id="authSubmitButton" class="w-full button-primary py-3">Login</button>
+                <div class="relative flex py-2 items-center">
+                    <div class="flex-grow border-t border-gray-600"></div>
+                    <span class="flex-shrink mx-4 text-gray-400 text-xs">OR</span>
+                    <div class="flex-grow border-t border-gray-600"></div>
+                </div>
+                <button id="googleSignInButton" class="w-full button-secondary flex items-center justify-center gap-3 py-3">
+                    <svg class="w-5 h-5" viewBox="0 0 48 48" width="48px" height="48px"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.222,0-9.519-3.317-11.28-7.962l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571l6.19,5.238C44.438,36.333,48,30.651,48,24C48,22.659,47.862,21.35,47.611,20.083z"></path></svg>
+                    Sign in with Google
+                </button>
+            </div>
+            <p class="text-center text-sm text-gray-400 mt-6">
+                <span id="authToggleText">Don't have an account?</span>
+                <a href="#" id="authToggleButton" class="font-semibold text-purple-400 hover:text-purple-300">Register here</a>
+            </p>
+        </div>
+    </div>
+    <!-- End Auth Modal -->
+
     <div class="absolute top-6 right-6">
-        <button id="historyButton" class="button-secondary">History</button>
+        <div class="flex gap-2">
+            <div id="userActions" class="hidden">
+                <!-- Logged-in actions will appear here -->
+            </div>
+            <div id="guestActions" class="flex gap-2">
+                <button id="loginButton" class="button-secondary">Login</button>
+                <button id="registerButton" class="button-secondary">Register</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -709,6 +912,55 @@
         const API_ORIGIN = '';
 
         // DOM Elements
+        let auth;
+        let database;
+
+        // --- Firebase Initialization ---
+        async function initializeApp() {
+            try {
+                // Disable auth buttons by default until we know Firebase is ready
+                document.querySelectorAll('#loginButton, #registerButton, #googleSignInButton').forEach(btn => {
+                    btn.disabled = true;
+                    btn.style.cursor = 'not-allowed';
+                    btn.style.opacity = '0.6';
+                });
+                // Use an absolute path starting with '/' to ensure the request goes to the root
+                // of the domain.
+                const response = await fetch(`${API_ORIGIN}/api/firebase-config`);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch Firebase config: ${response.status}`);
+                }
+                const firebaseConfig = await response.json();
+
+                if (!firebaseConfig.apiKey) {
+                    console.error("Firebase API key is missing. Authentication and database features will not work.");
+                    showMessage("Error: The application's backend is not configured for user accounts. Database features are disabled.", "error");
+                    return;
+                }
+
+                firebase.initializeApp(firebaseConfig);
+                auth = firebase.auth();
+                database = firebase.database();
+
+                isFirebaseInitialized = true;
+
+                // Re-enable auth buttons now that Firebase is ready
+                document.querySelectorAll('#loginButton, #registerButton, #googleSignInButton').forEach(btn => {
+                    btn.disabled = false;
+                    btn.style.cursor = 'pointer';
+                    btn.style.opacity = '1';
+                });
+
+                // Now that auth is initialized, set up the listener for auth state changes
+                setupAuthListener();
+
+            } catch (error) {
+                console.error('Error initializing Firebase:', error);
+                showMessage("Could not connect to the backend services for user accounts. Database features are disabled.", "error");
+            }
+        }
+
+
         const generateCardButton = document.getElementById('generateCardButton');
         const cardNameInput = document.getElementById('cardNameInput');
         const cardTypeSelector = document.getElementById('cardTypeSelector');
@@ -716,17 +968,22 @@
         const descriptionCounter = document.getElementById('descriptionCounter');
         const artStyleSelect = document.getElementById('artStyleSelect');
         const imageModelSelect = document.getElementById('imageModelSelect');
+        const negativePromptInput = document.getElementById('negativePromptInput');
+        const imageUploadInput = document.getElementById('imageUploadInput');
+        const clearImageUpload = document.getElementById('clearImageUpload');
 
         // Sub-type elements
         const humanOptions = document.getElementById('humanOptions');
         const alienOptions = document.getElementById('alienOptions');
         const zombieOptions = document.getElementById('zombieOptions');
         const powerUpOptions = document.getElementById('powerUpOptions');
+        const weaponOptions = document.getElementById('weaponOptions');
         const humanOccupationSelect = document.getElementById('humanOccupationSelect');
         const alienSpeciesSelect = document.getElementById('alienSpeciesSelect');
         const zombieAgeSelect = document.getElementById('zombieAgeSelect');
         const powerUpEffectSelect = document.getElementById('powerUpEffectSelect');
-
+        const weaponRangeSelect = document.getElementById('weaponRangeSelect');
+        
         const cardDisplayAndActionsArea = document.getElementById('cardDisplayAndActionsArea');
         const cardGrid = document.getElementById('cardGrid');
         const cardActionsContainer = document.getElementById('cardActionsContainer');
@@ -752,17 +1009,58 @@
         const closeModalButton = document.getElementById('closeModalButton');
 
         // History elements
-        const historyButton = document.getElementById('historyButton');
         const historyModal = document.getElementById('historyModal');
         const closeHistoryButton = document.getElementById('closeHistoryButton');
         const historyGrid = document.getElementById('historyGrid');
         const clearHistoryButton = document.getElementById('clearHistoryButton');
+
+        // Search elements
+        const searchModal = document.getElementById('searchModal');
+        const closeSearchButton = document.getElementById('closeSearchButton');
+        const searchInput = document.getElementById('searchInput');
+        const searchGrid = document.getElementById('searchGrid');
+        const searchMessage = document.getElementById('searchMessage');
+
+        // Deck Builder elements
+        const deckBuilderModal = document.getElementById('deckBuilderModal');
+        const closeDeckBuilderButton = document.getElementById('closeDeckBuilderButton');
+        const deckBuilderCollectionGrid = document.getElementById('deckBuilderCollectionGrid');
+        const collectionMessage = document.getElementById('collectionMessage');
+        const deckBuilderCurrentDeckGrid = document.getElementById('deckBuilderCurrentDeckGrid');
+        const deckCardCount = document.getElementById('deckCardCount');
+        const deckNameInput = document.getElementById('deckNameInput');
+        const saveDeckButton = document.getElementById('saveDeckButton');
+
+        // Deck Management elements
+        const deckManagementModal = document.getElementById('deckManagementModal');
+        const closeDeckManagementButton = document.getElementById('closeDeckManagementButton');
+        const deckManagementList = document.getElementById('deckManagementList');
+        const deckManagementMessage = document.getElementById('deckManagementMessage');
+        const selectedDeckTitle = document.getElementById('selectedDeckTitle');
+        const deckManagementCardGrid = document.getElementById('deckManagementCardGrid');
+
+        // Auth elements
+        const authModal = document.getElementById('authModal');
+        const closeAuthModalButton = document.getElementById('closeAuthModalButton');
+        const authTitle = document.getElementById('authTitle');
+        const authEmail = document.getElementById('authEmail');
+        const authPassword = document.getElementById('authPassword');
+        const authMessage = document.getElementById('authMessage');
+        const authSubmitButton = document.getElementById('authSubmitButton');
+        const authToggleText = document.getElementById('authToggleText');
+        const authToggleButton = document.getElementById('authToggleButton');
+        const googleSignInButton = document.getElementById('googleSignInButton');
+        const guestActions = document.getElementById('guestActions');
+        const userActions = document.getElementById('userActions');
 
         // State variables
         let currentCardData = null;
         let currentCardStats = {};
         let selectedCardElement = null;
         let generationHistory = [];
+        let currentDeck = []; // Array to hold card objects for the current deck
+        let isFirebaseInitialized = false;
+
 
         const originalDescriptionPlaceholder = cardDescriptionInput.placeholder;
         function hideAllSubtypeOptions() {
@@ -770,6 +1068,7 @@
             alienOptions.classList.add('hidden');
             zombieOptions.classList.add('hidden');
             powerUpOptions.classList.add('hidden');
+            weaponOptions.classList.add('hidden');
         }
 
         // Card type selector logic
@@ -800,6 +1099,11 @@
                     descriptionPlaceholder = "e.g., 'A plasma energy core that boosts weapon damage by 50%'";
                     powerUpOptions.classList.remove('hidden');
                     break;
+                case "Weapon":
+                    thematicPrompt = "A powerful weapon, either ancient or futuristic. It could be a blade humming with energy, a high-caliber rifle, or something more exotic.";
+                    descriptionPlaceholder = "e.g., 'A plasma sword that can cut through any material'";
+                    weaponOptions.classList.remove('hidden');
+                    break;
                 case "Any":
                 default:
                     thematicPrompt = "";
@@ -807,7 +1111,7 @@
                     break;
             }
             // Only set the thematic prompt if the user hasn't typed anything custom for that type yet
-            if (cardDescriptionInput.value === '' || cardDescriptionInput.value.startsWith('A resilient human') || cardDescriptionInput.value.startsWith('An extraterrestrial') || cardDescriptionInput.value.startsWith('An undead creature') || cardDescriptionInput.value.startsWith('A powerful enhancement')) {
+            if (cardDescriptionInput.value === '' || cardDescriptionInput.value.startsWith('A resilient human') || cardDescriptionInput.value.startsWith('An extraterrestrial') || cardDescriptionInput.value.startsWith('An undead creature') || cardDescriptionInput.value.startsWith('A powerful enhancement') || cardDescriptionInput.value.startsWith('A powerful weapon')) {
                  cardDescriptionInput.value = thematicPrompt;
             }
             cardDescriptionInput.placeholder = descriptionPlaceholder;
@@ -842,6 +1146,19 @@
         cardDescriptionInput.addEventListener('input', updateDescriptionCounter);
         updateDescriptionCounter(); // Initial call
 
+        // Handle image upload display
+        imageUploadInput.addEventListener('change', () => {
+            if (imageUploadInput.files.length > 0) {
+                clearImageUpload.classList.remove('hidden');
+            }
+        });
+
+        clearImageUpload.addEventListener('click', () => {
+            imageUploadInput.value = ''; // Clear the file input
+            clearImageUpload.classList.add('hidden');
+        });
+
+
         // Main card generation function
         generateCardButton.addEventListener('click', async () => {
             const userCardName = cardNameInput.value.trim();
@@ -860,6 +1177,8 @@
                 subTypeDetail = `Stage: ${zombieAgeSelect.value}`;
             } else if (cardType === "Power Up") {
                 subTypeDetail = `Effect: ${powerUpEffectSelect.value}`;
+            } else if (cardType === "Weapon") {
+                subTypeDetail = `Range: ${weaponRangeSelect.value}`;
             }
 
             if (!description && !userCardName) {
@@ -916,17 +1235,44 @@
                         styleModifier = "[[[pixelated]]], pixel, 8-bit, detailed sprite, vibrant";
                     } else if (selectedArtStyle === 'watercolor') {
                         styleModifier = "watercolor painting, wet-on-wet, detailed, soft colors";
+                    } else if (selectedArtStyle === 'cyberpunk') {
+                        styleModifier = "cyberpunk, neon lighting, futuristic, dystopian, high-tech, cinematic";
+                    } else if (selectedArtStyle === 'steampunk') {
+                        styleModifier = "steampunk, gears, cogs, victorian, brass and copper, intricate machinery";
+                    } else if (selectedArtStyle === 'comic_book') {
+                        styleModifier = "comic book art, bold lines, cel shading, dynamic, pop art";
+                    } else if (selectedArtStyle === 'mtg_style') {
+                        styleModifier = "Magic: The Gathering card art style, dark fantasy, detailed illustration, painterly, epic";
+                    } else if (selectedArtStyle === 'yugioh_style') {
+                        styleModifier = "Yu-Gi-Oh card art style, holographic, detailed monster design, dynamic, high contrast";
+                    } else if (selectedArtStyle === 'rpg_style') {
+                        styleModifier = "Final Fantasy video game art style, Yoshitaka Amano, detailed, ethereal, elegant, painterly";
                     }
 
                     const imagePrompt = `${styleModifier}, ${baseImagePrompt}`;
                     const imageModel = imageModelSelect.value;
+
+
+                    // Handle uploaded image
+                    let uploadedImageBase64 = null;
+                    if (imageUploadInput.files.length > 0) {
+                        const file = imageUploadInput.files[0];
+                        uploadedImageBase64 = await new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onload = () => resolve(reader.result);
+                            reader.onerror = error => reject(error);
+                            reader.readAsDataURL(file);
+                        });
+                    }
 
                     let imageUrls = [];
                     const imagePromises = [];
                     for (let i = 0; i < 4; i++) {
                         const imagePayload = {
                             model: imageModel,
-                            prompt: imagePrompt
+                            prompt: imagePrompt,
+                            negative_prompt: negativePromptInput.value.trim(), // Add the negative prompt
+                            image: uploadedImageBase64 // Add the uploaded image (will be null if none)
                         };
                         imagePromises.push(callBackendAPI('/api/generate-image', imagePayload));
                     }
@@ -997,6 +1343,11 @@
                             // Adjust font size after a brief delay to allow rendering
                             setTimeout(() => adjustLoreFontSize(cardElement), 50);
 
+                            // Adjust name and ability font sizes
+                            setTimeout(() => {
+                                adjustSingleLineFontSize(cardElement.querySelector('.card-name-display'));
+                                adjustSingleLineFontSize(cardElement.querySelector('.stat-special-ability-area p'));
+                            }, 50);
                             const viewArtButton = cardElement.querySelector('.view-art-button');
                             viewArtButton.addEventListener('click', (e) => {
                                 e.stopPropagation();
@@ -1034,12 +1385,23 @@
 
         // Generic Backend API call function
         async function callBackendAPI(endpoint, payload) {
+            const user = auth.currentUser;
+            const headers = { 'Content-Type': 'application/json' };
+
+            if (user) {
+                try {
+                    const token = await user.getIdToken(true); // Force refresh token if needed
+                    headers['Authorization'] = `Bearer ${token}`;
+                } catch (error) {
+                    console.error("Could not get auth token:", error);
+                    showMessage("Your session may have expired. Please log in again.", "error");
+                    auth.signOut(); // Log out the user if token is invalid
+                    throw new Error("Authentication token is invalid.");
+                }
+            }
+
             const url = `${API_ORIGIN}${endpoint}`;
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
 
             if (!response.ok) {
                 const errorText = await response.text();
@@ -1073,17 +1435,14 @@
                 </div>
                 <div class="card-dice-roll">${cardData.diceRoll ?? '0'}</div>
                 <div class="card-name-area">
-                    <h3 class="card-name-display pr-2">${cardData.cardName}</h3>
+                    <h3 id="cardNameDisplay" class="card-name-display">${cardData.cardName}</h3>
                     <button class="button-regenerate" title="Regenerate Lore">
                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/></svg>
                     </button>
                 </div>
                 <div class="card-body-wrapper">
                     <div class="card-lore-area">
-                        <div class="card-lore-text">${cardData.cardLore}</div>
-                        <div class="triggered-ability-area">
-                            <p>${cardData.triggeredAbility || ''}</p>
-                        </div>
+                        <div class="card-lore-text">${cardData.cardLore}${cardData.triggeredAbility ? `<br><br><p class="triggered-ability-text">${cardData.triggeredAbility}</p>` : ''}</div>
                     </div>
                     <div class="card-stats-container">
                         <div class="stat-box stat-attack">
@@ -1149,18 +1508,43 @@
         }
 
         // Function to dynamically adjust lore font size to fit the container
+        // This now handles both lore and the triggered ability text.
         function adjustLoreFontSize(cardElement) {
             const loreTextElement = cardElement.querySelector('.card-lore-text');
             if (!loreTextElement) return;
 
-            // Reset to base font size
-            loreTextElement.style.fontSize = '0.7rem';
+            const baseFontSize = 0.7; // in rem
+            loreTextElement.style.fontSize = `${baseFontSize}rem`;
 
             // Check for overflow and reduce font size until it fits
-            let currentFontSize = 0.7;
+            let currentFontSize = baseFontSize;
             while (loreTextElement.scrollHeight > loreTextElement.clientHeight && currentFontSize > 0.4) {
                 currentFontSize -= 0.02; // Decrement font size
                 loreTextElement.style.fontSize = `${currentFontSize}rem`;
+            }
+        }
+
+        // Function to dynamically adjust font size for single-line elements
+        function adjustSingleLineFontSize(element) {
+            if (!element) return;
+
+            // Reset inline font size to allow the CSS rule to take effect
+            element.style.fontSize = '';
+
+            // Get the initial font size from CSS (e.g., "1.1rem") and parse it
+            const computedStyle = window.getComputedStyle(element);
+            const initialFontSizeRem = parseFloat(computedStyle.fontSize) / parseFloat(window.getComputedStyle(document.documentElement).fontSize);
+            
+            if (isNaN(initialFontSizeRem)) return;
+
+            let currentFontSize = initialFontSizeRem;
+            element.style.fontSize = `${currentFontSize}rem`; // Ensure style is set for manipulation
+
+            // Check for overflow (scrollWidth > clientWidth) and reduce font size
+            // The '2' is a small buffer to prevent text from touching the edges
+            while (element.scrollWidth > element.clientWidth - 2 && currentFontSize > 0.5) {
+                currentFontSize -= 0.05;
+                element.style.fontSize = `${currentFontSize}rem`;
             }
         }
 
@@ -1365,13 +1749,18 @@
         });
 
         // Export card as PNG
-        exportPngButton.addEventListener('click', () => {
+        exportPngButton.addEventListener('click', async () => {
             if (!selectedCardElement || !currentCardData) {
                 showMessage("Please generate and select a card first.", "error");
                 return;
             }
 
             showMessage("Preparing PNG export...", "success");
+        
+            // Adjust font sizes for export, just like on the gallery page.
+            // This is crucial for html2canvas to render them correctly.
+            adjustSingleLineFontSize(selectedCardElement.querySelector('.card-name-display'));
+            adjustSingleLineFontSize(selectedCardElement.querySelector('.stat-special-ability-area p'));
 
             selectedCardElement.classList.add('exporting-card');
 
@@ -1383,24 +1772,26 @@
                 logging: false
             };
 
-            setTimeout(() => {
-                html2canvas(selectedCardElement, options).then(canvas => {
-                    const imageURI = canvas.toDataURL('image/png');
-                    const link = document.createElement('a');
-                    const filename = (currentCardData?.cardName?.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() || 'ai_card') + '.png';
-                    link.download = filename;
-                    link.href = imageURI;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    showMessage("Card exported as PNG!", "success");
-                }).catch(err => {
-                    console.error("Error exporting card:", err);
-                    showMessage("Export error: " + err.message, "error");
-                }).finally(() => {
-                    selectedCardElement.classList.remove('exporting-card');
-                });
-            }, 100);
+            try {
+                // Wait for all fonts to be loaded before rendering the canvas
+                await document.fonts.ready;
+
+                const canvas = await html2canvas(selectedCardElement, options);
+                const imageURI = canvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                const filename = (currentCardData?.cardName?.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() || 'ai_card') + '.png';
+                link.download = filename;
+                link.href = imageURI;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                showMessage("Card exported as PNG!", "success");
+            } catch (err) {
+                console.error("Error exporting card:", err);
+                showMessage("Export error: " + err.message, "error");
+            } finally {
+                selectedCardElement.classList.remove('exporting-card');
+            }
         });
 
         // Image Modal Logic
@@ -1452,13 +1843,11 @@
         }
 
         async function saveToHistory(cardData, imageUrls) {
-            const persistentImageUrls = await Promise.all(
-                imageUrls.map(url => url.startsWith('blob:') ? convertBlobUrlToBase64(url) : url)
-            );
-
+            // The image URLs from the API are persistent, so no conversion is needed.
+            // Storing Base64 strings would quickly exceed localStorage limits.
             const historyEntry = {
                 cardData: JSON.parse(JSON.stringify(cardData)),
-                imageUrls: persistentImageUrls
+                imageUrls: imageUrls
             };
 
             generationHistory.unshift(historyEntry);
@@ -1506,8 +1895,8 @@
             });
         }
 
-        function loadGenerationFromHistory(index) {
-            const entry = generationHistory[index];
+        function loadGenerationFromHistory(index, directEntry = null) {
+            const entry = directEntry || generationHistory[index];
             if (!entry) return;
 
             currentCardData = entry.cardData;
@@ -1525,7 +1914,13 @@
                 cardGrid.appendChild(cardElement);
             });
 
-            closeHistoryModal();
+            // Close whichever modal is open
+            if (searchModal.classList.contains('visible')) {
+                closeSearchModal();
+            }
+            if (historyModal.classList.contains('visible')) {
+                closeHistoryModal();
+            }
             showMessage(`Loaded "${currentCardData.cardName}" from history.`, 'success');
         }
 
@@ -1540,7 +1935,6 @@
         function openHistoryModal() { historyModal.classList.add('visible'); }
         function closeHistoryModal() { historyModal.classList.remove('visible'); }
 
-        historyButton.addEventListener('click', openHistoryModal);
         closeHistoryButton.addEventListener('click', closeHistoryModal);
         historyModal.addEventListener('click', (e) => { if (e.target === historyModal) closeHistoryModal(); });
 
@@ -1560,16 +1954,17 @@
                 return;
             }
 
-            const imageUrl = selectedCardElement.querySelector('.card-image-display').src;
-            const cardToSave = {
-                ...currentCardData,
-                imageUrl: imageUrl // Add the selected image URL to the data
-            };
-
             saveCardButton.disabled = true;
-            saveCardButton.innerHTML = '💾 Saving...';
+            saveCardButton.innerHTML = '&#x1F4BE; Saving...';
 
             try {
+                const imageUrl = selectedCardElement.querySelector('.card-image-display').src;
+                
+                const cardToSave = {
+                    ...currentCardData,
+                    imageUrl: imageUrl // Add the selected image URL to the data
+                };
+
                 const response = await callBackendAPI('/api/save-card', cardToSave);
                 if (response.success) {
                     showMessage('Card saved to your collection!', 'success');
@@ -1581,11 +1976,446 @@
                 showMessage(`Error: ${error.message}`, "error");
             } finally {
                 saveCardButton.disabled = false;
-                saveCardButton.innerHTML = '💾 Save to Collection';
+                saveCardButton.innerHTML = '&#x1F4BE; Save to Collection';
             }
         });
 
-        // Initial Load
-        loadHistory();
+        // --- Search Functions ---
+        function openSearchModal() {
+            searchModal.classList.add('visible');
+            searchInput.focus();
+            searchMessage.textContent = 'Start typing to search your collection.';
+            searchGrid.innerHTML = '';
+        }
+        function closeSearchModal() { searchModal.classList.remove('visible'); }
+
+        closeSearchButton.addEventListener('click', closeSearchModal);
+        searchModal.addEventListener('click', (e) => { if (e.target === searchModal) closeSearchModal(); });
+
+        let searchTimeout;
+
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(executeSearch, 300); // Debounce search to avoid excessive API calls
+        });
+
+        async function executeSearch() {
+            const query = searchInput.value.trim();
+            if (query.length < 2) {
+                searchGrid.innerHTML = '';
+                searchMessage.textContent = 'Please enter at least 2 characters to search.';
+                return;
+            }
+
+            searchMessage.textContent = 'Searching...';
+
+            try {
+                const user = auth.currentUser;
+                if (!user) {
+                    throw new Error("You must be logged in to search your collection.");
+                }
+                const token = await user.getIdToken();
+
+                const response = await fetch(`${API_ORIGIN}/api/search-cards?q=${encodeURIComponent(query)}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    if (response.status === 401 || response.status === 403) {
+                        auth.signOut(); // Auto-logout on auth error
+                    }
+                    throw new Error(errorData.error || `Search failed with status: ${response.status}`);
+                }
+                const results = await response.json();
+                renderSearchResults(results);
+            } catch (error) {
+                console.error('Search error:', error);
+                searchMessage.textContent = `Error: ${error.message}`;
+                searchGrid.innerHTML = '';
+            }
+        }
+
+        function renderSearchResults(results) {
+            searchGrid.innerHTML = '';
+            if (results.length === 0) {
+                searchMessage.textContent = 'No cards found matching your search.';
+                return;
+            }
+
+            searchMessage.textContent = `Found ${results.length} card(s).`;
+
+            results.forEach(cardData => {
+                const searchItem = document.createElement('div');
+                searchItem.className = 'history-item p-2 rounded-lg bg-black/20 cursor-pointer transition-transform hover:scale-105';
+                searchItem.title = `Load "${cardData.cardName}"`;
+                searchItem.innerHTML = `
+                    <img src="${cardData.imageUrl}" alt="${cardData.cardName}" class="w-full h-auto aspect-square object-cover rounded-md">
+                    <p class="text-center text-sm mt-2 truncate text-gray-300">${cardData.cardName}</p>
+                `;
+                searchItem.addEventListener('click', () => {
+                    // Re-use the history loading logic by passing the card data directly
+                    const historyEntry = {
+                        cardData: cardData,
+                        imageUrls: [cardData.imageUrl] // The search result has one image
+                    };
+                    loadGenerationFromHistory(null, historyEntry);
+                });
+                searchGrid.appendChild(searchItem);
+            });
+        }
+
+        // --- Deck Builder Functions ---
+        function openDeckBuilderModal() {
+            deckBuilderModal.classList.add('visible');
+            loadCollectionForDeckBuilder();
+            renderCurrentDeck(); // Render the (likely empty) deck
+        }
+
+        function closeDeckBuilderModal() {
+            deckBuilderModal.classList.remove('visible');
+        }
+
+        async function loadCollectionForDeckBuilder() {
+            collectionMessage.textContent = 'Loading your collection...';
+            deckBuilderCollectionGrid.innerHTML = '';
+
+            try {
+                const user = auth.currentUser;
+                if (!user) {
+                    throw new Error("You must be logged in to view your collection.");
+                }
+                const token = await user.getIdToken();
+
+                // We use the search endpoint with an empty query to fetch all cards
+                const response = await fetch(`${API_ORIGIN}/api/search-cards?q=`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.status === 401 || response.status === 403) {
+                    auth.signOut(); // Auto-logout on auth error
+                }
+                if (!response.ok) throw new Error('Failed to fetch collection.');
+
+                const collection = await response.json();
+
+                if (collection.length === 0) {
+                    collectionMessage.textContent = 'Your collection is empty. Save some cards first!';
+                    return;
+                }
+
+                collectionMessage.textContent = '';
+                collection.forEach(cardData => {
+                    const cardElement = createMiniCardElement(cardData);
+                    cardElement.addEventListener('click', () => addCardToDeck(cardData));
+                    deckBuilderCollectionGrid.appendChild(cardElement);
+                });
+
+            } catch (error) {
+                console.error('Error loading collection:', error);
+                collectionMessage.textContent = 'Error loading collection.';
+            }
+        }
+
+        function addCardToDeck(cardData) {
+            if (currentDeck.length >= 30) {
+                showMessage('Deck is full (max 30 cards).', 'error');
+                return;
+            }
+            // Check if a card with the same unique ID is already in the deck
+            if (currentDeck.some(card => card.id === cardData.id)) {
+                showMessage(`"${cardData.cardName}" is already in the deck.`, "error");
+                return;
+            }
+            currentDeck.push(cardData);
+            renderCurrentDeck();
+        }
+
+        function removeCardFromDeck(cardId, index) {
+            currentDeck.splice(index, 1);
+            renderCurrentDeck();
+        }
+
+        function renderCurrentDeck() {
+            deckBuilderCurrentDeckGrid.innerHTML = '';
+            deckCardCount.textContent = `${currentDeck.length} / 30 cards`;
+
+            currentDeck.forEach((cardData, index) => {
+                const cardElement = createMiniCardElement(cardData);
+                // Pass index to remove the correct instance if there are duplicates
+                cardElement.addEventListener('click', () => removeCardFromDeck(cardData.id, index));
+                deckBuilderCurrentDeckGrid.appendChild(cardElement);
+            });
+        }
+
+        function createMiniCardElement(cardData) {
+            const element = document.createElement('div');
+            element.className = 'history-item p-2 rounded-lg bg-black/20 cursor-pointer transition-transform hover:scale-105';
+            element.title = cardData.cardName;
+            element.innerHTML = `
+                <img src="${cardData.imageUrl}" alt="${cardData.cardName}" class="w-full h-auto aspect-square object-cover rounded-md">
+                <p class="text-center text-sm mt-1 truncate text-gray-300">${cardData.cardName}</p>
+            `;
+            return element;
+        }
+
+        async function saveCurrentDeck() {
+            const deckName = deckNameInput.value.trim();
+            if (!deckName) {
+                showMessage('Please enter a name for your deck.', 'error');
+                return;
+            }
+            if (currentDeck.length === 0) {
+                showMessage('Cannot save an empty deck.', 'error');
+                return;
+            }
+
+            const cardIds = currentDeck.map(card => card.id);
+            const payload = { name: deckName, cardIds: cardIds };
+
+            try {
+                const response = await callBackendAPI('/api/decks', payload);
+                showMessage(response.message, 'success');
+                closeDeckBuilderModal();
+            } catch (error) { showMessage(`Error saving deck: ${error.message}`, 'error'); }
+        }
+
+        // Add visibility style for deck builder modal
+        const style = document.createElement('style');
+        style.textContent = `
+            #deckBuilderModal.visible, #authModal.visible, #deckManagementModal.visible { opacity: 1; pointer-events: auto; }
+            .auth-required {
+                opacity: 0.5;
+                cursor: not-allowed;
+                pointer-events: none;
+            }
+        `;
+        document.head.appendChild(style);
+
+        // --- Deck Management Functions ---
+        function openDeckManagementModal() {
+            deckManagementModal.classList.add('visible');
+            loadUserDecks();
+        }
+
+        function closeDeckManagementModal() {
+            deckManagementModal.classList.remove('visible');
+            deckManagementList.innerHTML = '';
+            deckManagementCardGrid.innerHTML = '';
+            selectedDeckTitle.textContent = 'Select a deck to view its cards';
+        }
+
+        async function loadUserDecks() {
+            deckManagementMessage.textContent = 'Loading decks...';
+            deckManagementList.innerHTML = '';
+            deckManagementCardGrid.innerHTML = '';
+            selectedDeckTitle.textContent = 'Select a deck to view its cards';
+
+            try {
+                const user = auth.currentUser;
+                if (!user) throw new Error("You must be logged in.");
+                const token = await user.getIdToken();
+
+                const response = await fetch(`${API_ORIGIN}/api/decks`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to fetch decks.');
+
+                const decks = await response.json();
+
+                if (decks.length === 0) {
+                    deckManagementMessage.textContent = 'You have no saved decks.';
+                    return;
+                }
+
+                deckManagementMessage.textContent = '';
+                decks.forEach(deck => {
+                    const deckElement = document.createElement('div');
+                    deckElement.className = 'flex justify-between items-center p-3 rounded-lg bg-black/30 cursor-pointer hover:bg-purple-900/50 transition-colors';
+                    deckElement.title = `Click to view cards in ${deck.name}`;
+                    deckElement.innerHTML = `
+                        <span class="font-semibold">${deck.name} (${deck.cards.length} cards)</span>
+                        <div>
+                            <button class="play-deck-button button-secondary text-xs py-1 px-2 mr-2" data-deck-id="${deck.id}">Play</button>
+                            <button class="delete-deck-button text-red-400 hover:text-red-200 text-xs" data-deck-id="${deck.id}" data-deck-name="${deck.name}">Delete</button>
+                        </div>
+                    `;
+                    deckElement.addEventListener('click', (e) => {
+                        if (e.target.tagName !== 'BUTTON') {
+                            renderDeckContents(deck);
+                        }
+                    });
+                    deckManagementList.appendChild(deckElement);
+                });
+
+            } catch (error) {
+                deckManagementMessage.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        function renderDeckContents(deck) {
+            selectedDeckTitle.textContent = `Cards in "${deck.name}"`;
+            deckManagementCardGrid.innerHTML = '';
+            if (deck.cards.length === 0) {
+                deckManagementCardGrid.innerHTML = `<p class="col-span-full text-center text-gray-400">This deck is empty.</p>`;
+                return;
+            }
+            deck.cards.forEach(cardData => {
+                const cardElement = createMiniCardElement(cardData);
+                deckManagementCardGrid.appendChild(cardElement);
+            });
+        }
+
+        async function deleteDeck(deckId, deckName) {
+            if (!confirm(`Are you sure you want to delete the deck "${deckName}"? This cannot be undone.`)) {
+                return;
+            }
+            try {
+                const user = auth.currentUser;
+                if (!user) throw new Error("You must be logged in.");
+                const token = await user.getIdToken();
+
+                const response = await fetch(`${API_ORIGIN}/api/decks/${deckId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Failed to delete deck.');
+
+                showMessage(result.message, 'success');
+                loadUserDecks(); // Refresh the deck list
+
+            } catch (error) {
+                showMessage(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Event delegation for deck management buttons
+        deckManagementList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-deck-button')) {
+                deleteDeck(e.target.dataset.deckId, e.target.dataset.deckName);
+            } else if (e.target.classList.contains('play-deck-button')) {
+                window.location.href = `/game?deckId=${e.target.dataset.deckId}`;
+            }
+        });
+
+        // --- Deck Builder Event Listeners (always available) ---
+        closeDeckBuilderButton.addEventListener('click', closeDeckBuilderModal);
+        saveDeckButton.addEventListener('click', saveCurrentDeck);
+        closeDeckManagementButton.addEventListener('click', closeDeckManagementModal);
+
+        // --- Auth Functions ---
+        let isRegisterMode = false;
+
+        function openAuthModal(register = false) {
+            if (!isFirebaseInitialized) {
+                showMessage("User accounts are currently unavailable because the backend is not configured correctly.", "error");
+                return;
+            }
+            isRegisterMode = register;
+            authTitle.textContent = isRegisterMode ? 'Register' : 'Login';
+            authSubmitButton.textContent = isRegisterMode ? 'Register' : 'Login';
+            authToggleText.textContent = isRegisterMode ? 'Already have an account?' : "Don't have an account?";
+            authToggleButton.textContent = isRegisterMode ? 'Login here' : 'Register here';
+            authMessage.textContent = '';
+            authEmail.value = '';
+            authPassword.value = '';
+            authModal.classList.add('visible');
+            authEmail.focus();
+        }
+
+        function closeAuthModal() {
+            authModal.classList.remove('visible');
+        }
+
+        document.getElementById('loginButton').addEventListener('click', () => openAuthModal(false));
+        document.getElementById('registerButton').addEventListener('click', () => openAuthModal(true));
+        closeAuthModalButton.addEventListener('click', closeAuthModal);
+        authToggleButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            openAuthModal(!isRegisterMode);
+        });
+        
+        googleSignInButton.addEventListener('click', async () => {
+            if (!isFirebaseInitialized || !auth) {
+                showMessage("Cannot sign in: Firebase is not initialized.", "error");
+                return;
+            }
+            const provider = new firebase.auth.GoogleAuthProvider();
+            authMessage.textContent = '';
+            try {
+                // This will open a pop-up window for Google Sign-In.
+                await auth.signInWithPopup(provider);
+                // The onAuthStateChanged listener will handle the successful login.
+                closeAuthModal();
+            } catch (error) {
+                console.error("Google Sign-In Error:", error);
+                // Provide user-friendly error messages.
+                authMessage.textContent = error.message;
+            }
+        });
+
+        authSubmitButton.addEventListener('click', async () => {
+            if (!isFirebaseInitialized || !auth) {
+                showMessage("Cannot process request: Firebase is not initialized.", "error");
+                return;
+            }
+            const email = authEmail.value;
+            const password = authPassword.value;
+            authMessage.textContent = '';
+
+            try {
+                if (isRegisterMode) {
+                    await auth.createUserWithEmailAndPassword(email, password);
+                } else {
+                    await auth.signInWithEmailAndPassword(email, password);
+                }
+                closeAuthModal();
+            } catch (error) {
+                authMessage.textContent = error.message;
+            }
+        });
+
+        function setupAuthListener() {
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    // User is signed in.
+                    guestActions.classList.add('hidden');
+                    userActions.classList.remove('hidden');
+                    // Use a dropdown menu for a cleaner look
+                    userActions.innerHTML = `
+                        <div class="dropdown">
+                            <button class="button-secondary">Menu &#9662;</button>
+                            <div class="dropdown-content">
+                                <a href="/gallery">My Gallery</a>
+                                <button id="collectionButton">My Collection</button>
+                                <button id="deckBuilderButton">Deck Builder</button>
+                                <button id="deckManagementButton">Manage Decks</button>
+                                <button id="historyButton">History</button>
+                                <hr class="border-gray-600 my-1">
+                                <button id="logoutButton">Logout</button>
+                            </div>
+                        </div>
+                    `;
+                    // Add event listeners for the new buttons
+                    document.getElementById('logoutButton').addEventListener('click', () => auth.signOut());
+                    document.getElementById('collectionButton').addEventListener('click', openSearchModal);
+                    document.getElementById('historyButton').addEventListener('click', openHistoryModal);
+                    document.getElementById('deckBuilderButton').addEventListener('click', openDeckBuilderModal);
+                    document.getElementById('deckManagementButton').addEventListener('click', openDeckManagementModal);
+
+                } else {
+                    // User is signed out.
+                    guestActions.classList.remove('hidden');
+                    userActions.classList.add('hidden');
+                    userActions.innerHTML = ''; // Clear any user-specific buttons
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeApp);
     </script></body>
 </html>

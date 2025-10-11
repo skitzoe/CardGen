@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Card Collection Gallery</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            min-height: 100vh;
+            color: #e0e0e0;
+        }
+        #cardDetailModal.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .rarity-common { border-color: #9ca3af; } .rarity-uncommon { border-color: #4ade80; }
+        .rarity-rare { border-color: #60a5fa; } .rarity-epic { border-color: #c084fc; }
+        .rarity-legendary { border-color: #facc15; }
+
+        .glass-card {
+            background: rgba(36, 36, 64, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        .button-primary {
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-align: center;
+            border: none;
+            cursor: pointer;
+            background: linear-gradient(135deg, #7f5af0, #9333ea);
+            color: white;
+            box-shadow: 0 4px 15px rgba(127,90,240,0.3);
+        }
+        .button-primary:hover {
+            background: linear-gradient(135deg, #6a48d0, #7c3aed);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(127,90,240,0.4);
+        }
+        .button-secondary {
+            padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 600; transition: all 0.3s ease;
+            text-align: center; border: none; cursor: pointer; background: rgba(74, 74, 126, 0.8);
+            color: #e0e0e0; backdrop-filter: blur(10px);
+        }
+        .button-secondary:hover {
+            background: rgba(90, 90, 142, 0.9); transform: translateY(-1px);
+        }
+        .card-item {
+            background: linear-gradient(145deg, #2a2a4e, #1a1a2e);
+            border: 2px solid #4a4a7e;
+            border-radius: 1rem;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative; /* Needed for tooltip positioning */
+        }
+        .card-item:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.5), 0 10px 20px rgba(127,90,240,0.2);
+            z-index: 10;
+        }
+        .message-box {
+            padding: 1rem 1.5rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .message-box-error {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+        .card-tooltip {
+            position: absolute;
+            bottom: 105%; /* Position above the card */
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 15, 35, 0.95);
+            color: white;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease-in-out;
+            backdrop-filter: blur(10px);
+            white-space: nowrap;
+        }
+        .card-item:hover .card-tooltip {
+            opacity: 1;
+        }
+        /* Styles for PNG export (from index.html) */
+        .exporting-card {
+            transform: none !important;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 10px 20px rgba(127,90,240,0.1) !important;
+        }
+        .exporting-card .card-overlay-layer,
+        .exporting-card .card-name-area,
+        .exporting-card .card-lore-area,
+        .exporting-card .card-stats-container,
+        .exporting-card .stat-special-ability-area {
+            opacity: 1 !important;
+            transition: none !important;
+        }
+        .exporting-card .card-image-display {
+            filter: brightness(0.8) contrast(1.1) !important;
+        }
+    </style>
+    <!-- Card Layout Styles (Copied from index.html) -->
+    <style>
+        .card-layout {
+            background: linear-gradient(145deg, #2a2a4e, #1a1a2e);
+            border: 2px solid #4a4a7e;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 10px 20px rgba(127,90,240,0.1);
+            width: 320px;
+            height: 480px;
+            position: relative;
+            overflow: hidden;
+            border-radius: 1rem;
+            backdrop-filter: blur(10px);
+        }
+        .card-art-area {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; overflow: hidden;
+        }
+        .card-image-display {
+            display: block; width: 100%; height: 100%; object-fit: cover;
+        }
+        .card-overlay-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.3) 30%, rgba(0,0,0,0.4) 70%, rgba(0,0,0,0.8) 100%);
+            z-index: 10; pointer-events: none;
+        }
+        .card-name-area {
+            position: absolute; top: 25px; left: 65px; right: 20px; height: 40px;
+            display: flex; align-items: center; justify-content: center; /* Use flexbox for centering */
+            z-index: 11; background: rgba(0,0,0,0.3);
+            border-radius: 8px; padding: 0 15px; backdrop-filter: blur(5px);
+        }
+        #modalCardName {
+            font-size: 1.4rem; font-weight: bold; color: #fff; text-shadow: 2px 2px 4px rgba(0,0,0,0.9);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.5px;
+        }
+        .card-lore-area {
+            flex: 1; height: 100%; display: flex; flex-direction: column; font-size: 0.7rem;
+            line-height: 1.4; color: #f0f0f0; padding: 8px 12px; background: rgba(0,0,0,0.6);
+            border-radius: 8px; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .card-lore-text .triggered-ability-text {
+            font-style: italic; color: #c7d2fe;
+        }
+        .card-body-wrapper {
+            position: absolute; top: 270px; bottom: 35px; left: 20px; right: 20px;
+            display: flex; gap: 15px; z-index: 11;
+        }
+        .card-stats-container {
+            display: flex; flex-direction: column; justify-content: space-around; width: 60px;
+        }
+        .stat-box {
+            width: 60px; height: 60px;
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; /* Flexbox for centering */
+            color: white; font-weight: bold;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
+            position: relative; /* Keep for potential z-index stacking if needed */
+        }
+        .stat-box .stat-label { font-size: 0.7rem; opacity: 0.9; margin: 0; line-height: 1; }
+        .stat-box .stat-value { font-size: 1.5rem; line-height: 1.2; text-shadow: 2px 2px 4px rgba(0,0,0,0.9); }
+        .stat-attack { background: rgba(220,38,38,0.5); }
+        .stat-defense { background: rgba(59,130,246,0.5); }
+        .stat-speed { background: rgba(34,197,94,0.5); }
+        .stat-special-ability-area {
+            position: absolute; bottom: 5px; left: 20px; right: 20px; height: 24px; z-index: 11;
+            display: flex; align-items: center; justify-content: center; /* Use flexbox for centering */
+            color: #fff; background: rgba(127,90,240,0.6);
+            border-radius: 8px; overflow: hidden;
+            padding: 2px 10px; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.1);
+        }
+        #modalCardAbility {
+            font-size: 0.8rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .card-dice-roll {
+            position: absolute; top: 18px; left: 18px; width: 40px; height: 40px; border-radius: 50%;
+            background: linear-gradient(145deg, #0ea5e9, #0284c7); color: white; font-size: 1.5rem;
+            font-weight: bold;            
+            display: flex; align-items: center; justify-content: center; /* Use flexbox for centering */
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5); border: 2px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.7); z-index: 12;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 sm:p-8">
+
+    <div class="w-full max-w-7xl mx-auto p-6 sm:p-8 glass-card rounded-2xl shadow-2xl space-y-8">
+        <header class="text-center relative">
+            <a href="/" class="absolute top-0 left-0 button-secondary hidden sm:inline-block">
+                ← Back to Generator
+            </a>
+            <h1 class="text-4xl sm:text-5xl font-bold text-white mb-2">My Card Collection</h1>
+            <p class="text-purple-300 text-lg">Browse all the cards you have saved.</p>
+        </header>
+
+        <!-- Login Section -->
+        <div id="loginSection" class="text-center py-10">
+            <p class="text-xl mb-6">Please sign in to view your collection.</p>
+            <button id="googleSignInButton" class="button-primary inline-flex items-center justify-center gap-3 py-3 px-6">
+                <svg class="w-5 h-5" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.222,0-9.519-3.317-11.28-7.962l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571l6.19,5.238C44.438,36.333,48,30.651,48,24C48,22.659,47.862,21.35,47.611,20.083z"></path></svg>
+                Sign in with Google
+            </button>
+        </div>
+
+        <!-- Gallery Section -->
+        <div id="gallerySection" class="hidden">
+            <div id="messageArea" class="mb-4"></div>
+            <div id="cardGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                <!-- Cards will be dynamically inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Card Detail Modal -->
+    <div id="cardDetailModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 opacity-0 pointer-events-none transition-opacity duration-300" style="backdrop-filter: blur(8px);">
+        <div class="flex flex-col items-center gap-4">
+            <div id="modalCardContent" class="card-layout">
+                <div class="card-art-area">
+                    <img id="modalCardImage" class="card-image-display" src="" alt="Card Art"/>
+                </div>
+                <div id="modalCardDiceRoll" class="card-dice-roll"></div>
+                <div class="card-name-area">
+                    <h3 id="modalCardName" class="card-name-display"></h3>
+                </div>
+                <div class="card-body-wrapper">
+                    <div class="card-lore-area">
+                        <div id="modalCardLore" class="card-lore-text"></div>
+                    </div>
+                    <div class="card-stats-container">
+                        <div class="stat-box stat-attack">
+                            <span class="stat-label">ATK</span>
+                            <span id="modalCardAttack" class="stat-value"></span>
+                        </div>
+                        <div class="stat-box stat-defense">
+                            <span class="stat-label">DEF</span>
+                            <span id="modalCardDefense" class="stat-value"></span>
+                        </div>
+                        <div class="stat-box stat-speed">
+                            <span class="stat-label">SPD</span>
+                            <span id="modalCardSpeed" class="stat-value"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-special-ability-area">
+                    <p id="modalCardAbility" class="whitespace-nowrap overflow-hidden text-ellipsis"></p>
+                </div>
+                <div class="card-overlay-layer"></div>
+            </div>
+            <button id="exportModalCardButton" class="button-primary">Export as PNG</button>
+        </div>
+    </div>
+    <!-- End Card Detail Modal -->
+
+
+    <script>
+        // An empty string defaults to the same origin, which is correct for this setup.
+        // We will construct absolute paths for API calls.
+        const API_ORIGIN = '';
+
+        // DOM Elements
+        const loginSection = document.getElementById('loginSection');
+        const gallerySection = document.getElementById('gallerySection');
+        const googleSignInButton = document.getElementById('googleSignInButton');
+        const messageArea = document.getElementById('messageArea');
+        const cardGrid = document.getElementById('cardGrid');
+        const cardDetailModal = document.getElementById('cardDetailModal');
+
+        let currentModalCardData = null;
+        let auth;
+        let isFirebaseInitialized = false;
+
+        // --- Firebase Initialization ---
+        async function initializeApp() {
+            try {
+                // Use an absolute path starting with '/' to ensure the request goes to the root
+                // Disable auth button by default
+                googleSignInButton.disabled = true;
+                googleSignInButton.style.cursor = 'not-allowed';
+                googleSignInButton.style.opacity = '0.6';
+                loginSection.querySelector('p').textContent = "Connecting to services...";
+
+                // of the domain, regardless of the current page's path (e.g., /gallery).
+                const response = await fetch(`${API_ORIGIN}/api/firebase-config`);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch Firebase config: ${response.status}`);
+                }
+                const firebaseConfig = await response.json();
+
+                if (!firebaseConfig.apiKey) {
+                    console.error("Firebase API key is missing. Authentication and database features will not work.");
+                    loginSection.querySelector('p').textContent = "User collections are unavailable. The backend is not configured correctly.";
+                    return;
+                }
+
+                firebase.initializeApp(firebaseConfig);
+                auth = firebase.auth();
+                isFirebaseInitialized = true;
+
+                // Re-enable auth button
+                googleSignInButton.disabled = false;
+                googleSignInButton.style.cursor = 'pointer';
+                googleSignInButton.style.opacity = '1';
+                loginSection.querySelector('p').textContent = "Please sign in to view your collection.";
+
+                setupAuthListener();
+
+            } catch (error) {
+                console.error('Error initializing Firebase:', error);
+                loginSection.querySelector('p').textContent = "Could not connect to user services. Please try again later.";
+            }
+        }
+
+        function setupAuthListener() {
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    // User is signed in.
+                    loginSection.classList.add('hidden');
+                    gallerySection.classList.remove('hidden');
+                    loadCollection();
+                } else {
+                    // User is signed out.
+                    loginSection.classList.remove('hidden');
+                    gallerySection.classList.add('hidden');
+                    cardGrid.innerHTML = ''; // Clear any old data
+                }
+            });
+        }
+
+        googleSignInButton.addEventListener('click', async () => {
+            if (!isFirebaseInitialized || !auth) {
+                showMessage("Cannot sign in: Firebase is not initialized.", "error");
+                return;
+            }
+            const provider = new firebase.auth.GoogleAuthProvider();
+            try {
+                await auth.signInWithPopup(provider);
+                // The onAuthStateChanged listener will handle the successful login.
+            } catch (error) {
+                console.error("Google Sign-In Error:", error);
+                showMessage(error.message, "error");
+            }
+        });
+
+        async function loadCollection() {
+            showMessage('Loading your collection...', 'info');
+            cardGrid.innerHTML = '';
+
+            try {
+                const user = auth.currentUser;
+                if (!user) {
+                    throw new Error("You must be logged in to view your collection.");
+                }
+                const token = await user.getIdToken();
+
+                // Use the search endpoint with an empty query to fetch all cards
+                const response = await fetch(`${API_ORIGIN}/api/search-cards?q=`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.status === 401 || response.status === 403) {
+                    auth.signOut(); // Auto-logout on auth error
+                }
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to fetch collection.');
+                }
+
+                const collection = await response.json();
+                clearMessages();
+
+                if (collection.length === 0) {
+                    showMessage('Your collection is empty. Go create and save some cards!', 'info');
+                    return;
+                }
+
+                collection.forEach(cardData => {
+                    const cardElement = createCardElement(cardData);
+                    cardGrid.appendChild(cardElement);
+                });
+
+            } catch (error) {
+                console.error('Error loading collection:', error);
+                showMessage(`Error loading collection: ${error.message}`, 'error');
+            }
+        }
+
+        function createCardElement(cardData) {
+            const element = document.createElement('div');
+            element.className = 'card-item';
+            element.title = `View details for ${cardData.cardName}`;
+            // Store the full card data on the element for easy access on click
+            element.dataset.cardData = JSON.stringify(cardData);
+
+            const stats = cardData.stats || { attack: '--', defense: '--', speed: '--' };
+
+            element.innerHTML = `
+                <div class="card-tooltip">
+                    <div class="flex justify-center gap-4 text-sm">
+                        <span class="text-red-400">ATK: ${stats.attack}</span>
+                        <span class="text-blue-400">DEF: ${stats.defense}</span>
+                        <span class="text-green-400">SPD: ${stats.speed}</span>
+                    </div>
+                </div>
+                <img src="${cardData.imageUrl}" alt="${cardData.cardName}" class="w-full h-auto aspect-[2/3] object-cover">
+                <p class="text-center text-sm p-2 truncate font-semibold">${cardData.cardName}</p>
+            `;
+
+            element.addEventListener('click', () => {
+                // On click, we still want to show the full detail modal
+                const data = JSON.parse(element.dataset.cardData);
+                showCardDetailModal(data);
+            });
+
+            return element;
+        }
+
+        function showCardDetailModal(cardData) {
+            // Store the data for the export function
+            currentModalCardData = cardData;
+
+            // Populate modal fields
+            document.getElementById('modalCardImage').src = cardData.imageUrl;
+            document.getElementById('modalCardDiceRoll').textContent = cardData.diceRoll ?? '0';
+            document.getElementById('modalCardName').textContent = cardData.cardName;
+            
+            const loreElement = document.getElementById('modalCardLore');
+            loreElement.innerHTML = `${cardData.cardLore}${cardData.triggeredAbility ? `<br><br><p class="triggered-ability-text">${cardData.triggeredAbility}</p>` : ''}`;
+
+            document.getElementById('modalCardAttack').textContent = cardData.stats?.attack || '--';
+            document.getElementById('modalCardDefense').textContent = cardData.stats?.defense || '--';
+            document.getElementById('modalCardSpeed').textContent = cardData.stats?.speed || '--';
+            document.getElementById('modalCardAbility').textContent = cardData.abilityKeyword || 'Special Ability';
+
+            // Set rarity border color
+            const modalLayout = document.getElementById('modalCardContent');
+            modalLayout.className = 'card-layout'; // Reset classes
+            if (cardData.rarity) {
+                modalLayout.classList.add(`rarity-${cardData.rarity.toLowerCase()}`);
+            }
+
+            // Show the modal
+            cardDetailModal.classList.add('visible');
+
+            // Adjust font sizes for single-line elements to prevent overflow
+            // This needs a small delay to run after the modal is visible and rendered.
+            setTimeout(() => {
+                adjustSingleLineFontSize(document.getElementById('modalCardName'));
+                adjustSingleLineFontSize(document.getElementById('modalCardAbility'));
+            }, 50);
+        }
+
+        function closeCardDetailModal() {
+            cardDetailModal.classList.remove('visible');
+        }
+
+        // Add event listener to close the modal when clicking the background
+        cardDetailModal.addEventListener('click', (event) => {
+            // If the click is on the modal background itself (not its children), close it.
+            if (event.target.id === 'cardDetailModal') {
+                closeCardDetailModal();
+            }
+        });
+
+        // Also close with the Escape key
+        document.addEventListener('keydown', (event) => {
+            if (event.key === "Escape" && cardDetailModal.classList.contains('visible')) {
+                closeCardDetailModal();
+            }
+        });
+
+        // Function to dynamically adjust font size for single-line elements (from index.html)
+        function adjustSingleLineFontSize(element) {
+            if (!element) return;
+
+            // Reset inline font size to allow the CSS rule to take effect
+            element.style.fontSize = '';
+
+            // Get the initial font size from CSS and parse it
+            const computedStyle = window.getComputedStyle(element);
+            const initialFontSizeRem = parseFloat(computedStyle.fontSize) / parseFloat(window.getComputedStyle(document.documentElement).fontSize);
+            
+            if (isNaN(initialFontSizeRem)) return;
+
+            let currentFontSize = initialFontSizeRem;
+            element.style.fontSize = `${currentFontSize}rem`; // Ensure style is set for manipulation
+
+            // Check for overflow (scrollWidth > clientWidth) and reduce font size
+            // The '2' is a small buffer to prevent text from touching the edges
+            while (element.scrollWidth > element.clientWidth - 2 && currentFontSize > 0.5) {
+                currentFontSize -= 0.05;
+                element.style.fontSize = `${currentFontSize}rem`;
+            }
+        }
+
+        // Export Modal Card as PNG
+        document.getElementById('exportModalCardButton').addEventListener('click', async () => {
+            if (!currentModalCardData) {
+                showMessage("No card data available to export.", "error");
+                return;
+            }
+
+            showMessage("Preparing PNG export...", "info");
+            const cardElement = document.getElementById('modalCardContent');
+            cardElement.classList.add('exporting-card');
+
+            // Adjust font sizes for export, just like on the main page.
+            // This is crucial for html2canvas to render them correctly.
+            adjustSingleLineFontSize(document.getElementById('modalCardName'));
+            adjustSingleLineFontSize(document.getElementById('modalCardAbility'));
+
+            const options = {
+                allowTaint: true, useCORS: true, scale: 2, backgroundColor: 'transparent', logging: false
+            };
+
+            try {
+                // Wait for all fonts to be loaded before rendering the canvas
+                await document.fonts.ready;
+
+                const canvas = await html2canvas(cardElement, options);
+                const imageURI = canvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                const filename = (currentModalCardData.cardName?.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() || 'ai_card') + '.png';
+                link.download = filename;
+                link.href = imageURI;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                showMessage("Card exported as PNG!", "success");
+            } catch (err) {
+                console.error("Error exporting card:", err);
+                showMessage("Export error: " + err.message, "error");
+            } finally {
+                cardElement.classList.remove('exporting-card');
+            }
+        });
+
+        function showMessage(message, type = "info") {
+            const messageDiv = document.createElement('div');
+            const colorClass = type === 'error' ? 'message-box-error' : 'bg-blue-900/50 text-blue-200';
+            messageDiv.className = `message-box ${colorClass}`;
+            messageDiv.textContent = message;
+            messageArea.innerHTML = '';
+            messageArea.appendChild(messageDiv);
+        }
+
+        function clearMessages() {
+            messageArea.innerHTML = '';
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
+</body>
+</html>
