@@ -28,6 +28,9 @@ if not firebase_initialized:
 open_router_api_key = os.environ.get('OPENROUTER_API_KEY')
 deepai_api_key = os.environ.get('DEEPAI_API_KEY')
 dreamstudio_api_key = os.environ.get('DREAMSTUDIO_API_KEY')
+runpod_api_key = os.environ.get('RUNPOD_API_KEY')
+runpod_endpoint_id = os.environ.get('RUNPOD_ENDPOINT_ID')
+
 
 if not open_router_api_key:
     logging.warning("Warning: OPENROUTER_API_KEY environment variable not set. OpenRouter models will not be available.")
@@ -264,6 +267,49 @@ def generate_image():
             # Transform the response to match the structure of the other APIs
             response_data = {
                 "created": deepai_data.get("id", int(time.time())),
+                "data": [{"url": image_url}]
+            }
+            return jsonify(response_data)
+
+        elif model == 'runpod':
+            if not runpod_api_key or not runpod_endpoint_id:
+                return jsonify({'error': 'The RunPod API key or endpoint ID is not configured on the server.'}), 503
+
+            url = f"https://api.runpod.ai/v2/{runpod_endpoint_id}/runsync"
+            headers = {
+                "Authorization": f"Bearer {runpod_api_key}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "input": {
+                    "prompt": prompt,
+                    "negative_prompt": negative_prompt,
+                    "num_inference_steps": 25,
+                    "refiner_inference_steps": 50,
+                    "width": 1024,
+                    "height": 1024,
+                    "guidance_scale": 7.5,
+                    "strength": 0.3,
+                    "seed": None,
+                    "num_images": 1
+                }
+            }
+
+            if image_base64:
+                payload['input']['image_uri'] = image_base64
+
+            response = requests.post(url, headers=headers, json=payload)
+            response.raise_for_status()
+
+            runpod_data = response.json()
+            image_url = runpod_data.get('output', [{}])[0].get('image')
+
+            if not image_url:
+                raise Exception("Image URL not found in RunPod response")
+
+            # Transform the response to match the structure of the other APIs
+            response_data = {
+                "created": runpod_data.get("id", int(time.time())),
                 "data": [{"url": image_url}]
             }
             return jsonify(response_data)
